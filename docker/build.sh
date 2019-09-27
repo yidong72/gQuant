@@ -52,15 +52,11 @@ fi
 D_FILE=${D_FILE:='Dockerfile.Rapids'}
 D_CONT=${D_CONT:='gquant/gquant:latest'}
 
-echo "Fetching latest version of gQuant project"
-git clone --recursive https://github.com/rapidsai/gQuant
-
 
 cat > $D_FILE <<EOF
 FROM $CONTAINER
 USER root
 
-ADD gQuant /rapids/gQuant
 
 RUN apt-get update && apt-get install -y libfontconfig1 libxrender1
 
@@ -69,8 +65,12 @@ SHELL ["bash","-c"]
 #
 # Additional python libs
 #
-RUN pip install nxpd $CUPY
-RUN conda install -y -c conda-forge dask-labextension recommonmark numpydoc sphinx_rtd_theme pudb \
+RUN source activate rapids \ 
+    && pip install nxpd $CUPY \
+    && pip install git+https://github.com/rapidsai/gQuant.git
+
+RUN source activate rapids \ 
+    && conda install -y -c conda-forge dask-labextension recommonmark numpydoc sphinx_rtd_theme pudb \
     python-graphviz bqplot=0.11.5 nodejs=11.11.0 jupyterlab=0.35.4 ipywidgets=7.4.2 pytables mkl numexpr
 
 #
