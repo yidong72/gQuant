@@ -74,15 +74,15 @@ RUN source activate rapids \
 
 RUN source activate rapids \ 
     && conda install -y -c conda-forge dask-labextension recommonmark numpydoc sphinx_rtd_theme pudb \
-    python-graphviz bqplot=0.11.5 nodejs=11.11.0 jupyterlab=0.35.4 ipywidgets=7.4.2 pytables mkl numexpr \
+    python-graphviz bqplot nodejs jupyterlab ipywidgets pytables mkl numexpr \
     pydot
 
 #
 # required set up
 #
 RUN source activate rapids \ 
-    && jupyter labextension install @jupyter-widgets/jupyterlab-manager@0.38.1 --no-build \
-    && jupyter labextension install bqplot@0.4.5 --no-build \
+    && jupyter labextension install @jupyter-widgets/jupyterlab-manager --no-build \
+    && jupyter labextension install bqplot --no-build \
     && mkdir /.local /.jupyter /.config /.cupy  \
     && chmod 777 /.local /.jupyter /.config /.cupy
 
