@@ -192,11 +192,10 @@ RUN pip install jsonpath-ng ray[tune] Cython
 
 ## install the NemO
 WORKDIR /home/quant/
-RUN git clone -b v0.11.1 https://github.com/NVIDIA/NeMo.git 
+RUN git clone https://github.com/NVIDIA/NeMo.git 
 WORKDIR /home/quant/NeMo
 RUN sed -i 's/numba<=0.48/numba==0.49.1/g' requirements/requirements_asr.txt
-COPY sacrebleu.patch /home/quant/NeMo/
-RUN patch -u nemo/collections/nlp/metrics/sacrebleu.py -i sacrebleu.patch && bash reinstall.sh
+RUN bash reinstall.sh
 
 RUN conda install -y ruamel.yaml
 

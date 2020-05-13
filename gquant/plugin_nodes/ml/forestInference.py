@@ -136,15 +136,10 @@ class ForestInferenceNode(Node, _PortTypesMixin):
 
     def conf_schema(self):
         json = {
-            "title": "Forest Inferencing Node",
+            "title": "XGBoost Inference Node configure",
             "type": "object",
-            "description": """ForestInference provides GPU-accelerated inference
-            (prediction) for random forest and boosted decision tree models.
-            This module does not support training models. Rather, users should
-            train a model in another package and save it in a
-            treelite-compatible format. (See https://github.com/dmlc/treelite)
-            Currently, LightGBM, XGBoost and SKLearn GBDT and random forest
-            models are supported.""",
+            "description": """make predictions for all the input
+             data points""",
             "properties": {
                 "columns": {
                     "type": "array",
@@ -169,13 +164,6 @@ class ForestInferenceNode(Node, _PortTypesMixin):
                     "type": "string",
                     "description": "the column name for prediction",
                     "default": "predict"
-                },
-                "model_type":  {
-                    "type": "string",
-                    "description": """Format of the saved treelite model to be 
-                        load""",
-                    "enum": ["xgboost", "lightgbm"],
-                    "default": "xgboost"
                 },
             },
             "required": ['file'],
@@ -210,9 +198,7 @@ class ForestInferenceNode(Node, _PortTypesMixin):
                     train_cols = [col for col in data_df.columns
                                   if col not in self.conf['columns']]
         train_cols.sort()
-        fm = ForestInference.load(filename,
-                                  model_type=self.conf.get("model_type",
-                                                           "xgboost"))
+        fm = ForestInference.load(filename)
         prediction = fm.predict(data_df[train_cols])
         prediction.index = data_df.index
         data_df[predict_col] = prediction

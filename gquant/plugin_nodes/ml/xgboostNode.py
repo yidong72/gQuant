@@ -3,6 +3,7 @@ import cudf
 import dask_cudf
 import xgboost as xgb
 import dask
+from gquant.dataframe_flow._port_type_node import _PortTypesMixin
 from gquant.dataframe_flow.portsSpecSchema import (ConfSchema,
                                                    PortsSpecSchema, NodePorts)
 from xgboost import Booster
@@ -13,9 +14,10 @@ from collections import OrderedDict
 __all__ = ['TrainXGBoostNode', 'InferXGBoostNode']
 
 
-class TrainXGBoostNode(Node):
+class TrainXGBoostNode(Node, _PortTypesMixin):
 
     def init(self):
+        _PortTypesMixin.init(self)
         self.INPUT_PORT_NAME = 'in'
         self.OUTPUT_PORT_NAME = 'model_out'
         cols_required = {}
@@ -290,9 +292,11 @@ class TrainXGBoostNode(Node):
         return {self.OUTPUT_PORT_NAME: bst}
 
 
-class InferXGBoostNode(Node):
+class InferXGBoostNode(Node, _PortTypesMixin):
 
     def init(self):
+        _PortTypesMixin.init(self)
+        # self.delayed_process = True
         self.INPUT_PORT_NAME = 'data_in'
         self.INPUT_PORT_MODEL_NAME = 'model_in'
         self.OUTPUT_PORT_NAME = 'out'

@@ -1,5 +1,6 @@
 from gquant.dataframe_flow import TaskGraph
 from gquant.dataframe_flow import Node
+from gquant.plugin_nodes.nemo_util.nemoBaseNode import NeMoBase
 from gquant.dataframe_flow.task import Task
 from gquant.dataframe_flow._node_flow import OUTPUT_TYPE, OUTPUT_ID
 from gquant.dataframe_flow import TaskSpecSchema
@@ -93,7 +94,7 @@ def get_nodes(task_graph):
                 num = max(int(port[2:]), num)
             inputs.append({'name': 'in'+str(num+1), "type": ["any"]})
             out_node['inputs'] = inputs
-    task_graph.run_cleanup()
+    task_graph.nemo_cleanup()
     return {'nodes': nodes, 'edges': edges}
 
 
@@ -196,24 +197,16 @@ def add_nodes():
             labmod_pkg = 'gquant.{}'.format(item[0])
             all_nodes[labmod_pkg] = []
             for node in inspect.getmembers(item[1]):
-                nodecls = node[1]
-                if not inspect.isclass(nodecls):
-                    continue
-                if not issubclass(nodecls, Node):
-                    continue
-                if nodecls in loaded_node_classes:
-                    continue
-
-                task = {'id': 'node_'+str(uuid.uuid4()),
-                        'type': node[0],
-                        'conf': {},
-                        'inputs': []}
-                t = Task(task)
-                n = nodecls(t)
-                nodeObj = get_node_obj(n, False)
-                all_nodes[labmod_pkg].append(nodeObj)
-                loaded_node_classes.append(nodecls)
-
+                if inspect.isclass(node[1]):
+                    task = {'id': 'node_'+str(uuid.uuid4()),
+                            'type': node[0],
+                            'conf': {},
+                            'inputs': []}
+                    t = Task(task)
+                    n = node[1](t)
+                    if issubclass(node[1], Node):
+                        nodeObj = get_node_obj(n)
+                        all_nodes[item[0]].append(nodeObj)
     for module in all_modules:
         module_file_or_path = Path(all_modules[module])
         loaded = load_modules(all_modules[module], module)
@@ -230,29 +223,18 @@ def add_nodes():
 
             if not issubclass(nodecls, Node):
                 continue
-
-            if nodecls in loaded_node_classes:
+            if node[1] == NeMoBase:
                 continue
-
-            task = {'id': 'node_'+str(uuid.uuid4()),
-                    'type': node[0],
-                    'conf': {},
-                    'inputs': [],
-                    'module': module
-                    }
-            t = Task(task)
-            n = nodecls(t)
-            nodeObj = get_node_obj(n, False)
-            if module_file_or_path.is_dir():
-                # submod = nodecls.__module__.split('.')[1:]
-                # flatten out the namespace hierarchy
-                submod = nodecls.__module__.split('.')[1:2]
-                modulename_ = '.'.join([modulename, '.'.join(submod)]) \
-                    if submod else modulename
-                all_nodes.setdefault(modulename_, []).append(nodeObj)
-            else:
-                all_nodes.setdefault(modulename, []).append(nodeObj)
-
-            loaded_node_classes.append(nodecls)
-
+            if inspect.isclass(node[1]):
+                if issubclass(node[1], Node):
+                    task = {'id': 'node_'+str(uuid.uuid4()),
+                            'type': node[0],
+                            'conf': {},
+                            'inputs': [],
+                            'module': module
+                            }
+                    t = Task(task)
+                    n = node[1](t)
+                    nodeObj = get_node_obj(n)
+                    all_nodes[modulename].append(nodeObj)
     return all_nodes

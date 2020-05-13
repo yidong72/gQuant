@@ -291,8 +291,8 @@ class NodeTaskGraphMixin(object):
                 if self.delayed_process and \
                         cudf.DataFrame in expected_type and \
                         dask_cudf.DataFrame not in expected_type:
-                    expected_type.append(dask_cudf.DataFrame)
-
+                    expected_type.extend([dask_cudf.DataFrame])
+                
                 match = False
                 for expected in expected_type:
                     if issubclass(out_type, expected):

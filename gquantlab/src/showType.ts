@@ -1,4 +1,3 @@
-//TODO need to refactor this to handle dynamically loaded template for display
 export function htmlForType(d: any, key: string): string {
   let header = '';
   // only show column if it is dataframe
