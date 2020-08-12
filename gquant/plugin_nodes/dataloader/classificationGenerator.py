@@ -7,7 +7,6 @@ import dask_cudf
 import cuml
 import copy
 import cuml.dask.datasets.classification
-import dask
 
 CUDF_PORT_NAME = 'cudf_out'
 DASK_CUDF_PORT_NAME = 'dask_cudf_out'
@@ -146,9 +145,16 @@ class ClassificationData(Node):
             df = get_cudf()
             output.update({CUDF_PORT_NAME: df})
         if self.outport_connected(DASK_CUDF_PORT_NAME):
-            total = self.conf.get('n_samples', 100)
-            cudfs = [dask.delayed(get_cudf)(i*total) for i in range(
-                self.conf.get('n_parts', 2))]
-            ddf = dask_cudf.from_delayed(cudfs)
-            output.update({DASK_CUDF_PORT_NAME: ddf})
+
+            def mapfun(x):
+                return x.get()
+
+            x, y = cuml.dask.datasets.classification.make_classification(
+                **self.conf)
+            ddf = x.map_blocks(mapfun,
+                               dtype=x.dtype).to_dask_dataframe()
+            out = dask_cudf.from_dask_dataframe(ddf)
+            out.columns = ['x'+str(i) for i in range(x.shape[1])]
+            out['y'] = y.astype('int64')
+            output.update({DASK_CUDF_PORT_NAME: out})
         return output
