@@ -5,10 +5,22 @@
 import { DOMWidgetModel, DOMWidgetView, ViewList } from '@jupyter-widgets/base';
 import * as widgets from '@jupyter-widgets/base';
 import { MODULE_NAME, MODULE_VERSION } from './version';
-import { ContentHandler } from './document';
+import { ContentHandler, INode } from './document';
 import { MainView } from './mainComponent';
-import { Panel } from '@lumino/widgets';
+import { Panel, Widget } from '@lumino/widgets';
 import { CommandRegistry } from '@lumino/commands';
+import { IFileBrowserFactory } from '@jupyterlab/filebrowser';
+
+import { Toolbar, CommandToolbarButton } from '@jupyterlab/apputils';
+import {
+    COMMAND_TOOL_BAR_RELAYOUT,
+    COMMAND_TOOL_BAR_EXECUTE,
+    COMMAND_TOOL_BAR_CLEAN,
+    COMMAND_TOOL_BAR_OPEN_NEW_FILE,
+    COMMAND_TOOL_BAR_CONVERT_CELL_TO_FILE,
+    setupToolBarCommands
+} from './commands';
+import { JupyterFrontEnd } from '@jupyterlab/application';
 
 export class GQuantModel extends DOMWidgetModel {
   static serializers = {
@@ -40,28 +52,68 @@ export class GQuantModel extends DOMWidgetModel {
 }
 
 export class GQuantView extends DOMWidgetView {
-  static commands: CommandRegistry = null;
+  static apps: JupyterFrontEnd = null;
+  static browserFactory: IFileBrowserFactory = null;
   private _contentHandler: ContentHandler;
   private _widget: MainView;
   views: ViewList<DOMWidgetView>;
 
+  addCommands(commands: CommandRegistry, toolBar: Toolbar): void {
+    const item0 = new CommandToolbarButton({
+      commands: commands,
+      id: COMMAND_TOOL_BAR_RELAYOUT
+    });
+    const item1 = new CommandToolbarButton({
+      commands: commands,
+      id: COMMAND_TOOL_BAR_EXECUTE
+    });
+    const item2 = new CommandToolbarButton({
+      commands: commands,
+      id: COMMAND_TOOL_BAR_CLEAN
+    });
+    const item3 = new CommandToolbarButton({
+      commands: commands,
+      id: COMMAND_TOOL_BAR_OPEN_NEW_FILE
+    });
+    const item4 = new CommandToolbarButton({
+      commands: commands,
+      id: COMMAND_TOOL_BAR_CONVERT_CELL_TO_FILE
+    });
+
+    toolBar.addItem('relayout', item0);
+    toolBar.addItem('run', item1);
+    toolBar.addItem('clean', item2);
+    toolBar.addItem('open', item3);
+    toolBar.addItem('create', item4);
+  }
+
   render(): void {
     this._contentHandler = new ContentHandler(null);
-    if (GQuantView.commands) {
-      this._contentHandler.commandRegistry = GQuantView.commands;
+    if (GQuantView.apps) {
+      this._contentHandler.commandRegistry = GQuantView.apps.commands;
     }
     this._contentHandler.runGraph.connect(this.run, this);
     this._contentHandler.cleanResult.connect(this.clean, this);
     const pane = new Panel();
     this._widget = new MainView(this._contentHandler);
+    const toolBar = new Toolbar<Widget>();
     pane.addWidget(this._widget);
+    pane.addWidget(toolBar);
     this.pWidget = pane;
     this._contentHandler.renderGraph(this.model.get('value'));
     this._contentHandler.setPrivateCopy(this.model);
     this.model.on('change:cache', this.cache_changed, this);
     this.views = new ViewList<DOMWidgetView>(this.addView, null, this);
     this.model.on('change:sub', this.sub_changed, this);
-    //this.views.update([this.model.get('sub')]);
+    const commands = new CommandRegistry();
+    setupToolBarCommands(
+      commands,
+      this._contentHandler,
+      GQuantView.browserFactory,
+      GQuantView.apps.commands,
+      GQuantView.apps
+    );
+    this.addCommands(commands, toolBar);
   }
 
   run(): void {
@@ -71,6 +123,12 @@ export class GQuantView extends DOMWidgetView {
   }
 
   clean(): void {
+    const cache = this.model.get('cache');
+    cache.nodes.forEach((node: INode) => {
+      node.busy = false;
+    });
+    this._contentHandler.chartStateUpdate.emit(cache);
+    this._contentHandler.privateCopy.set('cache', cache);
     this.send({
       event: 'clean'
     });
@@ -80,10 +138,10 @@ export class GQuantView extends DOMWidgetView {
     const subView = this.create_child_view(value);
     subView.then(view => {
       const pane = this.pWidget as Panel;
-      if (pane.widgets.length === 2) {
-        pane.layout.removeWidget(pane.widgets[1]);
+      if (pane.widgets.length === 3) {
+        pane.layout.removeWidget(pane.widgets[2]);
       }
-      pane.insertWidget(1, view.pWidget);
+      pane.insertWidget(2, view.pWidget);
     });
     this.views.update([value]);
   }
