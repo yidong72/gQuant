@@ -53,7 +53,7 @@ class NormalizationNode(Node, _PortTypesMixin):
             return NodePorts(inports=input_ports, outports=output_ports)
 
     def columns_setup(self):
-        if 'columns' in self.conf:
+        if 'columns' in self.conf and self.conf.get('include', True):
             cols_required = {}
             for col in self.conf['columns']:
                 cols_required[col] = None
@@ -64,10 +64,16 @@ class NormalizationNode(Node, _PortTypesMixin):
         input_columns = self.get_input_columns()
         if self.INPUT_PORT_NAME in input_columns:
             col_from_inport = input_columns[self.INPUT_PORT_NAME]
+            enums = [col for col in col_from_inport.keys()]
             if 'columns' in self.conf:
+                if self.conf.get('include', True):
+                    included_colums = self.conf['columns']
+                else:
+                    included_colums = set(enums) - set(self.conf['columns'])
                 cols_required = {}
-                for col in self.conf['columns']:
-                    cols_required[col] = col_from_inport[col]
+                for col in included_colums:
+                    if col in col_from_inport:
+                        cols_required[col] = col_from_inport[col]
                 self.required = {
                     self.INPUT_PORT_NAME: cols_required,
                     self.INPUT_NORM_MODEL_NAME: cols_required
@@ -101,7 +107,14 @@ class NormalizationNode(Node, _PortTypesMixin):
                     "items": {
                         "type": "string"
                     }
-                }
+                },
+                "include":  {
+                    "type": "boolean",
+                    "description": """if set true, the `columns` need to be 
+                    normalized. if false, all dataframe columns except the 
+                    `columns` need to be normalized""",
+                    "default": True
+                },
             },
             "required": ["columns"],
         }
@@ -127,7 +140,10 @@ class NormalizationNode(Node, _PortTypesMixin):
         dataframe
         """
         input_df = inputs[self.INPUT_PORT_NAME]
-        cols = self.conf['columns']
+        if self.conf.get('include', True):
+            cols = self.conf['columns']
+        else:
+            cols = input_df.columns.difference(self.conf['columns'])
         if self.INPUT_NORM_MODEL_NAME in inputs:
             norm_data = inputs[self.INPUT_NORM_MODEL_NAME].data
             means = norm_data['mean']
