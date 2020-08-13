@@ -103,7 +103,8 @@ class NormalizationNode(Node, _PortTypesMixin):
                 "columns":  {
                     "type": "array",
                     "description": """an array of columns that need to
-                     be normalized""",
+                     be normalized, or excluded from normalization depending
+                     on the `incldue` flag state""",
                     "items": {
                         "type": "string"
                     }

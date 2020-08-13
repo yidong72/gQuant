@@ -1,3 +1,4 @@
 from .splitDataNode import DataSplittingNode
+from .xgboostNode import TrainXGBoostNode
 
-__all__ = ["DataSplittingNode"]
+__all__ = ["DataSplittingNode", "TrainXGBoostNode"]

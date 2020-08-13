@@ -124,7 +124,9 @@ class DataSplittingNode(Node, _PortTypesMixin):
         del conf['target']
         r = cuml.preprocessing.model_selection.train_test_split(
             input_df[train_cols], input_df[target_col], **conf)
+        r[2].index = r[0].index
         r[0][target_col] = r[2]
+        r[3].index = r[1].index
         r[1][target_col] = r[3]
         output = {}
         if self.outport_connected(self.OUTPUT_PORT_NAME_TRAIN):
