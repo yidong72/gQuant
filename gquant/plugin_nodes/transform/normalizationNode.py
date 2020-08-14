@@ -129,8 +129,7 @@ class NormalizationNode(Node, _PortTypesMixin):
 
     def process(self, inputs):
         """
-        select the asset based on asset id, which is defined in `asset` in the
-        nodes' conf
+        normalize the data to zero mean, std 1
 
         Arguments
         -------

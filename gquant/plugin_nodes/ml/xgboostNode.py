@@ -9,7 +9,7 @@ from gquant.dataframe_flow.portsSpecSchema import (ConfSchema,
 from xgboost import Booster
 
 
-__all__ = ['TrainXGBoostNode']
+__all__ = ['TrainXGBoostNode', 'InferXGBoostNode']
 
 
 class TrainXGBoostNode(Node, _PortTypesMixin):
@@ -32,7 +32,7 @@ class TrainXGBoostNode(Node, _PortTypesMixin):
         }
         output_ports = {
             self.OUTPUT_PORT_NAME: {
-                port_type: Booster
+                port_type: [Booster, dict]
             }
         }
         input_connections = self.get_connected_inports()
@@ -63,18 +63,25 @@ class TrainXGBoostNode(Node, _PortTypesMixin):
                 else:
                     included_colums = set(enums) - set(self.conf['columns'])
                 cols_required = {}
+                cols_output = {}
+                cols_output['train'] = {}
+                cols_output['label'] = {}
                 for col in included_colums:
                     if col in col_from_inport:
                         cols_required[col] = col_from_inport[col]
+                        cols_output['train'][col] = col_from_inport[col]
                 if ('target' in self.conf and
                         self.conf['target'] in col_from_inport):
                     cols_required[self.conf['target']
                                   ] = col_from_inport[self.conf['target']]
+                    cols_output['label'][
+                        self.conf['target']] = col_from_inport[
+                            self.conf['target']]
                 self.required = {
                     self.INPUT_PORT_NAME: cols_required,
                 }
             output_cols = {
-                self.OUTPUT_PORT_NAME: col_from_inport,
+                self.OUTPUT_PORT_NAME: cols_output,
             }
             return output_cols
         else:
@@ -93,9 +100,7 @@ class TrainXGBoostNode(Node, _PortTypesMixin):
         json = {
             "title": "XGBoost Node configure",
             "type": "object",
-            "description": """Split the data into training and testing based on
-             'train_data', train a XGBoost model based on the training data, 
-             make predictions for all the data points, compute the trading.
+            "description": """train a XGBoost model for the input data, 
             """,
             "properties": {
                 "num_of_rounds": {
@@ -242,24 +247,6 @@ class TrainXGBoostNode(Node, _PortTypesMixin):
             return ConfSchema(json=json, ui=ui)
 
     def process(self, inputs):
-        """
-        The process is doing following things:
-            1. split the data into training and testing based on provided
-               conf['train_date']. If it is not provided, all the data is
-               treated as training data.
-            2. train a XGBoost model based on the training data
-            3. Make predictions for all the data points including training and
-               testing.
-            4. From the prediction of returns, compute the trading signals that
-               can be used in the backtesting.
-        Arguments
-        -------
-         inputs: list
-            list of input dataframes.
-        Returns
-        -------
-        dataframe
-        """
         dxgb_params = {
                 'max_depth':         8,
                 'max_leaves':        2 ** 8,
@@ -275,6 +262,7 @@ class TrainXGBoostNode(Node, _PortTypesMixin):
         else:
             included_colums = set(input_df.columns) - set(self.conf['columns'])
         train_cols = list(set(included_colums) - set([self.conf['target']]))
+        train_cols.sort()
 
         if isinstance(input_df, dask_cudf.DataFrame):
             # get the client
@@ -284,7 +272,6 @@ class TrainXGBoostNode(Node, _PortTypesMixin):
             dmatrix = xgb.dask.DaskDMatrix(client, train, label=target)
             bst = xgb.dask.train(client, dxgb_params, dmatrix,
                                  num_boost_round=self.conf["num_of_rounds"])
-            bst = bst['booster']
         elif isinstance(input_df, cudf.DataFrame):
             train = input_df[train_cols]
             target = input_df[self.conf['target']]
@@ -292,3 +279,117 @@ class TrainXGBoostNode(Node, _PortTypesMixin):
             bst = xgb.train(dxgb_params, dmatrix,
                             num_boost_round=self.conf["num_of_rounds"])
         return {self.OUTPUT_PORT_NAME: bst}
+
+
+class InferXGBoostNode(Node, _PortTypesMixin):
+
+    def init(self):
+        _PortTypesMixin.init(self)
+        self.delayed_process = True
+        self.INPUT_PORT_NAME = 'data_in'
+        self.INPUT_PORT_MODEL_NAME = 'model_in'
+        self.OUTPUT_PORT_NAME = 'out'
+        cols_required = {}
+        self.required = {
+            self.INPUT_PORT_NAME: cols_required
+        }
+
+    def ports_setup_from_types(self, types):
+        port_type = PortsSpecSchema.port_type
+        input_ports = {
+            self.INPUT_PORT_NAME: {
+                port_type: types
+            },
+            self.INPUT_PORT_MODEL_NAME: {
+                port_type: [Booster, dict]
+            }
+        }
+        output_ports = {
+            self.OUTPUT_PORT_NAME: {
+                port_type: types
+            }
+        }
+        input_connections = self.get_connected_inports()
+        if self.INPUT_PORT_NAME in input_connections:
+            determined_type = input_connections[self.INPUT_PORT_NAME]
+            input_ports.update({self.INPUT_PORT_NAME:
+                                {port_type: determined_type}})
+            output_ports.update({self.OUTPUT_PORT_NAME:
+                                {port_type: determined_type}})
+            return NodePorts(inports=input_ports,
+                             outports=output_ports)
+        else:
+            return NodePorts(inports=input_ports, outports=output_ports)
+
+    def columns_setup(self):
+        input_columns = self.get_input_columns()
+        if self.INPUT_PORT_NAME in input_columns:
+            col_from_inport = input_columns[self.INPUT_PORT_NAME]
+            if self.INPUT_PORT_MODEL_NAME in input_columns:
+                required_cols = input_columns[
+                    self.INPUT_PORT_MODEL_NAME]['train']
+                predict = self.conf.get('prediction', 'predict')
+                col_from_inport[predict] = None # the type is not determined 
+                self.required = {self.INPUT_PORT_NAME: required_cols,
+                                 self.INPUT_PORT_MODEL_NAME: {}}
+            output_cols = {
+                self.OUTPUT_PORT_NAME: col_from_inport,
+            }
+            return output_cols
+        else:
+            col_from_inport = {}
+            output_cols = {
+                self.OUTPUT_PORT_NAME: col_from_inport,
+            }
+            return output_cols
+
+    def ports_setup(self):
+        types = [cudf.DataFrame,
+                 dask_cudf.DataFrame]
+        return self.ports_setup_from_types(types)
+
+    def conf_schema(self):
+        json = {
+            "title": "XGBoost Inference Node configure",
+            "type": "object",
+            "description": """make predictions for all the input
+             data points""",
+            "properties": {
+                "prediction":  {
+                    "type": "string",
+                    "description": "the column name for prediction",
+                    "default": "predict"
+                },
+
+            },
+            "required": [],
+        }
+        ui = {}
+        return ConfSchema(json=json, ui=ui)
+
+    def process(self, inputs):
+        input_df = inputs[self.INPUT_PORT_NAME]
+        bst_model = inputs[self.INPUT_PORT_MODEL_NAME]
+        input_columns = self.get_input_columns()
+        required_cols = input_columns[
+            self.INPUT_PORT_MODEL_NAME]['train']
+        required_cols = list(required_cols.keys())
+        required_cols.sort()
+        predict_col = self.conf.get('prediction', 'predict')
+        if isinstance(input_df, dask_cudf.DataFrame):
+            # get the client
+            client = dask.distributed.client.default_client()
+            dtrain = xgb.dask.DaskDMatrix(client, input_df[required_cols])
+            prediction = xgb.dask.predict(client, bst_model, dtrain).persist()
+            pred_df = dask_cudf.from_dask_dataframe(
+                prediction.to_dask_dataframe())
+            pred_df.index = input_df.index
+            input_df[predict_col] = pred_df
+        else:
+            infer_dmatrix = xgb.DMatrix(input_df[required_cols])
+            prediction = cudf.Series(bst_model.predict(infer_dmatrix),
+                                     nan_as_null=False,
+                                     index=input_df.index
+                                     )
+            input_df[predict_col] = prediction
+        return {self.OUTPUT_PORT_NAME: input_df}
