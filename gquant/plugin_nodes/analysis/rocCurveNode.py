@@ -49,7 +49,7 @@ class RocCurveNode(Node, _PortTypesMixin):
                 },
 
             },
-            "required": ["points", "label", "prediction"],
+            "required": ["label", "prediction"],
         }
         ui = {
         }
@@ -78,8 +78,11 @@ class RocCurveNode(Node, _PortTypesMixin):
         if isinstance(input_df,  dask_cudf.DataFrame):
             input_df = input_df.compute()  # get the computed value
 
-        num_points = self.conf['points']
-        stride = max(len(input_df) // num_points, 1)
+        if 'points' in self.conf:
+            num_points = self.conf['points']
+            stride = max(len(input_df) // num_points, 1)
+        else:
+            stride = 1
         linear_x = LinearScale()
         linear_y = LinearScale()
         yax = Axis(label='True Positive Rate', scale=linear_x,
