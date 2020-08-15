@@ -53,6 +53,10 @@ class NormalizationNode(Node, _PortTypesMixin):
             return NodePorts(inports=input_ports, outports=output_ports)
 
     def columns_setup(self):
+        self.required = {
+            self.INPUT_PORT_NAME: {},
+            self.INPUT_NORM_MODEL_NAME: {}
+        }
         if 'columns' in self.conf and self.conf.get('include', True):
             cols_required = {}
             for col in self.conf['columns']:
@@ -61,8 +65,39 @@ class NormalizationNode(Node, _PortTypesMixin):
                 self.INPUT_PORT_NAME: cols_required,
                 self.INPUT_NORM_MODEL_NAME: cols_required
             }
+        output_cols = {
+            self.OUTPUT_PORT_NAME: self.required[self.INPUT_PORT_NAME],
+            self.OUTPUT_NORM_MODEL_NAME: self.required[
+                self.INPUT_NORM_MODEL_NAME]
+        }
         input_columns = self.get_input_columns()
-        if self.INPUT_PORT_NAME in input_columns:
+        if (self.INPUT_NORM_MODEL_NAME in input_columns and
+                self.INPUT_PORT_NAME in input_columns):
+            cols_required = input_columns[self.INPUT_NORM_MODEL_NAME]
+            self.required = {
+                self.INPUT_PORT_NAME: cols_required,
+                self.INPUT_NORM_MODEL_NAME: cols_required
+            }
+            col_from_inport = input_columns[self.INPUT_PORT_NAME]
+            output_cols = {
+                self.OUTPUT_PORT_NAME: col_from_inport,
+                self.OUTPUT_NORM_MODEL_NAME: cols_required
+            }
+            return output_cols
+        elif (self.INPUT_NORM_MODEL_NAME in input_columns and
+              self.INPUT_PORT_NAME not in input_columns):
+            cols_required = input_columns[self.INPUT_NORM_MODEL_NAME]
+            self.required = {
+                self.INPUT_PORT_NAME: cols_required,
+                self.INPUT_NORM_MODEL_NAME: cols_required
+            }
+            output_cols = {
+                self.OUTPUT_PORT_NAME: cols_required,
+                self.OUTPUT_NORM_MODEL_NAME: cols_required
+            }
+            return output_cols
+        elif (self.INPUT_NORM_MODEL_NAME not in input_columns and
+              self.INPUT_PORT_NAME in input_columns):
             col_from_inport = input_columns[self.INPUT_PORT_NAME]
             enums = [col for col in col_from_inport.keys()]
             if 'columns' in self.conf:
@@ -78,18 +113,12 @@ class NormalizationNode(Node, _PortTypesMixin):
                     self.INPUT_PORT_NAME: cols_required,
                     self.INPUT_NORM_MODEL_NAME: cols_required
                 }
-            output_cols = {
-                self.OUTPUT_PORT_NAME: col_from_inport,
-                self.OUTPUT_NORM_MODEL_NAME: col_from_inport
-            }
+                output_cols = {
+                    self.OUTPUT_PORT_NAME: col_from_inport,
+                    self.OUTPUT_NORM_MODEL_NAME: cols_required
+                }
             return output_cols
-        else:
-            col_from_inport = self.required[self.INPUT_PORT_NAME]
-            output_cols = {
-                self.OUTPUT_PORT_NAME: col_from_inport,
-                self.OUTPUT_NORM_MODEL_NAME: col_from_inport
-            }
-            return output_cols
+        return output_cols
 
     def ports_setup(self):
         return _PortTypesMixin.ports_setup(self)
