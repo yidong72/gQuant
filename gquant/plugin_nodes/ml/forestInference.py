@@ -63,7 +63,10 @@ class ForestInferenceNode(Node, _PortTypesMixin):
         if (self.INPUT_PORT_NAME in input_columns
                 and self.INPUT_PORT_MODEL_NAME in input_columns):
             col_from_inport = input_columns[self.INPUT_PORT_NAME]
-            required_cols = input_columns[self.INPUT_PORT_MODEL_NAME]['train']
+            if 'train' in input_columns[self.INPUT_PORT_MODEL_NAME]:
+                required_cols = input_columns[self.INPUT_PORT_MODEL_NAME]['train']
+            else:
+                required_cols = {}
             predict = self.conf.get('prediction', 'predict')
             col_from_inport[predict] = None  # the type is not determined
             self.required = {self.INPUT_PORT_NAME: required_cols,
@@ -74,7 +77,10 @@ class ForestInferenceNode(Node, _PortTypesMixin):
             return output_cols
         elif (self.INPUT_PORT_NAME not in input_columns and
               self.INPUT_PORT_MODEL_NAME in input_columns):
-            required_cols = input_columns[self.INPUT_PORT_MODEL_NAME]['train']
+            if 'train' in input_columns[self.INPUT_PORT_MODEL_NAME]:
+                required_cols = input_columns[self.INPUT_PORT_MODEL_NAME]['train']
+            else:
+                required_cols = {}
             predict = self.conf.get('prediction', 'predict')
             col_from_inport = copy.copy(required_cols)
             col_from_inport[predict] = None  # the type is not determined
