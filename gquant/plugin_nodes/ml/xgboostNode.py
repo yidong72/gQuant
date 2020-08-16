@@ -8,6 +8,7 @@ from gquant.dataframe_flow.portsSpecSchema import (ConfSchema,
                                                    PortsSpecSchema, NodePorts)
 from xgboost import Booster
 import copy
+from collections import OrderedDict
 
 
 __all__ = ['TrainXGBoostNode', 'InferXGBoostNode']
@@ -62,15 +63,19 @@ class TrainXGBoostNode(Node, _PortTypesMixin):
                 if self.conf.get('include', True):
                     included_colums = self.conf['columns']
                 else:
-                    included_colums = set(enums) - set(self.conf['columns'])
+                    included_colums = [col for col in enums
+                                       if col not in self.conf['columns']]
                 cols_required = {}
                 cols_output = {}
-                cols_output['train'] = {}
-                cols_output['label'] = {}
+                cols_output['train'] = OrderedDict()
+                cols_output['label'] = OrderedDict()
                 for col in included_colums:
                     if col in col_from_inport:
                         cols_required[col] = col_from_inport[col]
                         cols_output['train'][col] = col_from_inport[col]
+                    else:
+                        cols_required[col] = None
+                        cols_output['train'][col] = None
                 if ('target' in self.conf and
                         self.conf['target'] in col_from_inport):
                     cols_required[self.conf['target']
@@ -78,6 +83,10 @@ class TrainXGBoostNode(Node, _PortTypesMixin):
                     cols_output['label'][
                         self.conf['target']] = col_from_inport[
                             self.conf['target']]
+                else:
+                    cols_required[self.conf['target']] = None
+                    cols_output['label'][
+                        self.conf['target']] = None
                 self.required = {
                     self.INPUT_PORT_NAME: cols_required,
                 }
@@ -261,9 +270,11 @@ class TrainXGBoostNode(Node, _PortTypesMixin):
         if self.conf.get('include', True):
             included_colums = self.conf['columns']
         else:
-            included_colums = set(input_df.columns) - set(self.conf['columns'])
-        train_cols = list(set(included_colums) - set([self.conf['target']]))
-        train_cols.sort()
+            included_colums = [col for col in input_df.columns
+                               if col not in self.conf['columns']]
+        train_cols = [col for col in included_colums if col !=self.conf['target']]
+        # list(set(included_colums) - set([self.conf['target']]))
+        # train_cols.sort()
 
         if isinstance(input_df, dask_cudf.DataFrame):
             # get the client
@@ -396,7 +407,6 @@ class InferXGBoostNode(Node, _PortTypesMixin):
         required_cols = input_columns[
             self.INPUT_PORT_MODEL_NAME]['train']
         required_cols = list(required_cols.keys())
-        required_cols.sort()
         predict_col = self.conf.get('prediction', 'predict')
         if isinstance(input_df, dask_cudf.DataFrame):
             # get the client
