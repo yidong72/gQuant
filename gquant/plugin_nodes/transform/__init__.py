@@ -12,9 +12,11 @@ from .assetIndicatorNode import AssetIndicatorNode
 from .dropNode import DropNode
 from .indicatorNode import IndicatorNode
 from .normalizationNode import NormalizationNode
+from .addSignIndicator import AddSignIndicatorNode
 
 __all__ = ["AverageNode", "AssetFilterNode", "LeftMergeNode",
            "ReturnFeatureNode", "SortNode",
            "DatetimeFilterNode", "MinNode", "MaxNode",
            "ValueFilterNode", "RenameNode", "AssetIndicatorNode",
-           "DropNode", "IndicatorNode", "NormalizationNode"]
+           "DropNode", "IndicatorNode", "NormalizationNode",
+           "AddSignIndicatorNode"]

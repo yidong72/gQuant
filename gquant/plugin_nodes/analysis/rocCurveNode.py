@@ -35,10 +35,6 @@ class RocCurveNode(Node, _PortTypesMixin):
             "description": """Plot the ROC Curve for binary classification problem.
             """,
             "properties": {
-                "points":  {
-                    "type": "number",
-                    "description": "number of data points for the chart"
-                },
                 "label":  {
                     "type": "string",
                     "description": "Ground truth label column name"
@@ -63,7 +59,7 @@ class RocCurveNode(Node, _PortTypesMixin):
 
     def process(self, inputs):
         """
-        Plot the ROC curve 
+        Plot the ROC curve
 
         Arguments
         -------
@@ -78,11 +74,6 @@ class RocCurveNode(Node, _PortTypesMixin):
         if isinstance(input_df,  dask_cudf.DataFrame):
             input_df = input_df.compute()  # get the computed value
 
-        if 'points' in self.conf:
-            num_points = self.conf['points']
-            stride = max(len(input_df) // num_points, 1)
-        else:
-            stride = 1
         linear_x = LinearScale()
         linear_y = LinearScale()
         yax = Axis(label='True Positive Rate', scale=linear_x,
@@ -94,14 +85,13 @@ class RocCurveNode(Node, _PortTypesMixin):
         label_col = input_df[self.conf['label']].values
         pred_col = input_df[self.conf['prediction']].values
         if isinstance(input_df, cudf.DataFrame):
-           fpr, tpr, _ = metrics.roc_curve(label_col.get(),
-                                           pred_col.get())
+            fpr, tpr, _ = metrics.roc_curve(label_col.get(),
+                                            pred_col.get())
         else:
-           fpr, tpr, _ = metrics.roc_curve(label_col,
-                                           pred_col)
+            fpr, tpr, _ = metrics.roc_curve(label_col,
+                                            pred_col)
         curve_label = 'ROC (area = {:.2f})'.format(metrics.auc(fpr, tpr))
-        line = Lines(x=fpr[::stride],
-                     y=tpr[::stride],
+        line = Lines(x=fpr, y=tpr,
                      scales={'x': linear_x, 'y': linear_y},
                      colors=['blue'], labels=[curve_label],
                      display_legend=True)
