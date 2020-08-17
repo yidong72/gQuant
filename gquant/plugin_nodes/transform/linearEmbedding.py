@@ -2,22 +2,28 @@ from gquant.dataframe_flow import Node
 from gquant.dataframe_flow._port_type_node import _PortTypesMixin
 from gquant.dataframe_flow.portsSpecSchema import (ConfSchema,
                                                    PortsSpecSchema, NodePorts)
-from .data_obj import NormalizationData
+from .data_obj import ProjectionData 
+import cupy as cp
+import copy
 from collections import OrderedDict
 
+__all__ = ['LinearEmbeddingNode']
 
-class NormalizationNode(Node, _PortTypesMixin):
+SPECIAL_OUTPUT_DIM_COL = 'OUTPUT_DIM_23b1c5ce-e0bf-11ea-afcf-80e82cc76d44'
+
+
+class LinearEmbeddingNode(Node, _PortTypesMixin):
 
     def init(self):
         _PortTypesMixin.init(self)
         self.INPUT_PORT_NAME = 'df_in'
         self.OUTPUT_PORT_NAME = 'df_out'
-        self.INPUT_NORM_MODEL_NAME = 'norm_data_in'
-        self.OUTPUT_NORM_MODEL_NAME = 'norm_data_out'
+        self.INPUT_PROJ_NAME = 'proj_data_in'
+        self.OUTPUT_PROJ_NAME = 'proj_data_out'
         cols_required = {}
         self.required = {
             self.INPUT_PORT_NAME: cols_required,
-            self.INPUT_NORM_MODEL_NAME: cols_required
+            self.INPUT_PROJ_NAME: cols_required
         }
 
     def ports_setup_from_types(self, types):
@@ -26,8 +32,8 @@ class NormalizationNode(Node, _PortTypesMixin):
             self.INPUT_PORT_NAME: {
                 port_type: types
             },
-            self.INPUT_NORM_MODEL_NAME: {
-                port_type: NormalizationData
+            self.INPUT_PROJ_NAME: {
+                port_type: ProjectionData
             }
         }
 
@@ -35,8 +41,8 @@ class NormalizationNode(Node, _PortTypesMixin):
             self.OUTPUT_PORT_NAME: {
                 port_type: types
             },
-            self.OUTPUT_NORM_MODEL_NAME: {
-                port_type: NormalizationData
+            self.OUTPUT_PROJ_NAME: {
+                port_type: ProjectionData
             }
         }
 
@@ -56,7 +62,7 @@ class NormalizationNode(Node, _PortTypesMixin):
     def columns_setup(self):
         self.required = {
             self.INPUT_PORT_NAME: {},
-            self.INPUT_NORM_MODEL_NAME: {}
+            self.INPUT_PROJ_NAME: {}
         }
         if 'columns' in self.conf and self.conf.get('include', True):
             cols_required = {}
@@ -64,40 +70,51 @@ class NormalizationNode(Node, _PortTypesMixin):
                 cols_required[col] = None
             self.required = {
                 self.INPUT_PORT_NAME: cols_required,
-                self.INPUT_NORM_MODEL_NAME: cols_required
+                self.INPUT_PROJ_NAME: cols_required
             }
         output_cols = {
             self.OUTPUT_PORT_NAME: self.required[self.INPUT_PORT_NAME],
-            self.OUTPUT_NORM_MODEL_NAME: self.required[
-                self.INPUT_NORM_MODEL_NAME]
+            self.OUTPUT_PROJ_NAME: self.required[
+                self.INPUT_PROJ_NAME]
         }
         input_columns = self.get_input_columns()
-        if (self.INPUT_NORM_MODEL_NAME in input_columns and
+        if (self.INPUT_PROJ_NAME in input_columns and
                 self.INPUT_PORT_NAME in input_columns):
-            cols_required = input_columns[self.INPUT_NORM_MODEL_NAME]
+            cols_required = copy.copy(input_columns[self.INPUT_PROJ_NAME])
+            out_dim = cols_required[SPECIAL_OUTPUT_DIM_COL]
+            del cols_required[SPECIAL_OUTPUT_DIM_COL]
             self.required = {
                 self.INPUT_PORT_NAME: cols_required,
-                self.INPUT_NORM_MODEL_NAME: cols_required
+                self.INPUT_PROJ_NAME: cols_required
             }
             col_from_inport = input_columns[self.INPUT_PORT_NAME]
+            cols = ['em'+str(i) for i in range(out_dim)]
+            for col in cols:
+                col_from_inport[col] = None
             output_cols = {
                 self.OUTPUT_PORT_NAME: col_from_inport,
-                self.OUTPUT_NORM_MODEL_NAME: cols_required
+                self.OUTPUT_PROJ_NAME: cols_required
             }
             return output_cols
-        elif (self.INPUT_NORM_MODEL_NAME in input_columns and
+        elif (self.INPUT_PROJ_NAME in input_columns and
               self.INPUT_PORT_NAME not in input_columns):
-            cols_required = input_columns[self.INPUT_NORM_MODEL_NAME]
+            cols_required = copy.copy(input_columns[self.INPUT_PROJ_NAME])
+            out_dim = cols_required[SPECIAL_OUTPUT_DIM_COL]
+            del cols_required[SPECIAL_OUTPUT_DIM_COL]
             self.required = {
                 self.INPUT_PORT_NAME: cols_required,
-                self.INPUT_NORM_MODEL_NAME: cols_required
+                self.INPUT_PROJ_NAME: cols_required
             }
+            output = copy.copy(cols_required) 
+            cols = ['em'+str(i) for i in range(out_dim)]
+            for col in cols:
+                output[col] = None
             output_cols = {
-                self.OUTPUT_PORT_NAME: cols_required,
-                self.OUTPUT_NORM_MODEL_NAME: cols_required
+                self.OUTPUT_PORT_NAME: output,
+                self.OUTPUT_PROJ_NAME: cols_required
             }
             return output_cols
-        elif (self.INPUT_NORM_MODEL_NAME not in input_columns and
+        elif (self.INPUT_PROJ_NAME not in input_columns and
               self.INPUT_PORT_NAME in input_columns):
             col_from_inport = input_columns[self.INPUT_PORT_NAME]
             enums = [col for col in col_from_inport.keys()]
@@ -115,11 +132,17 @@ class NormalizationNode(Node, _PortTypesMixin):
                         cols_required[col] = None
                 self.required = {
                     self.INPUT_PORT_NAME: cols_required,
-                    self.INPUT_NORM_MODEL_NAME: cols_required
+                    self.INPUT_PROJ_NAME: cols_required
                 }
+                col_dict = ['em'+str(i) for i in range(
+                    self.conf['out_dimension'])]
+                for col in col_dict:
+                    col_from_inport[col] = None
+                proj_out = copy.copy(cols_required)
+                proj_out[SPECIAL_OUTPUT_DIM_COL] = self.conf['out_dimension']
                 output_cols = {
                     self.OUTPUT_PORT_NAME: col_from_inport,
-                    self.OUTPUT_NORM_MODEL_NAME: cols_required
+                    self.OUTPUT_PROJ_NAME: proj_out
                 }
             return output_cols
         return output_cols
@@ -129,9 +152,12 @@ class NormalizationNode(Node, _PortTypesMixin):
 
     def conf_schema(self):
         json = {
-            "title": "Normalization Node configure",
+            "title": "Linear Embeding configure",
             "type": "object",
-            "description": "Normalize the columns to have zero mean and std 1",
+            "description": """Project the features randomly and linearly to a
+            space of different dimension. It generates the random projection
+            matrix of size feature_dim x out_dimension and does dot product
+            with the input dataframe""",
             "properties": {
                 "columns":  {
                     "type": "array",
@@ -145,10 +171,19 @@ class NormalizationNode(Node, _PortTypesMixin):
                 "include":  {
                     "type": "boolean",
                     "description": """if set true, the `columns` need to be 
-                    normalized. if false, all dataframe columns except the 
+                    normalized. if false, all dataframe columns except the
                     `columns` need to be normalized""",
                     "default": True
                 },
+                "out_dimension": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "description": """the projected dimension size"""
+                },
+                "seed": {
+                    "type": "integer",
+                    "description": """the seed number for random projection"""
+                }
             },
             "required": [],
         }
@@ -173,29 +208,36 @@ class NormalizationNode(Node, _PortTypesMixin):
         dataframe
         """
         input_df = inputs[self.INPUT_PORT_NAME]
-        if self.INPUT_NORM_MODEL_NAME in inputs:
-            norm_data = inputs[self.INPUT_NORM_MODEL_NAME].data
+
+        if self.INPUT_PROJ_NAME in inputs:
+            data_in = inputs[self.INPUT_PROJ_NAME].data
             input_columns = self.get_input_columns()
-            means = norm_data['mean']
-            stds = norm_data['std']
-            col_from_inport = input_columns[self.INPUT_NORM_MODEL_NAME]
-            cols = [i for i in col_from_inport.keys()]
+            col_from_inport = input_columns[self.INPUT_PROJ_NAME]
+            proj_data = data_in
+            cols = []
+            # it has  required colmns that used to do mapping
+            for col in col_from_inport.keys():
+                if col != SPECIAL_OUTPUT_DIM_COL:
+                    cols.append(col)
         else:
-            # need to compute the mean and std
             if self.conf.get('include', True):
                 cols = self.conf['columns']
             else:
                 cols = input_df.columns.difference(self.conf['columns'])
-            means = input_df[cols].mean()
-            stds = input_df[cols].std()
-        norm = (input_df[cols] - means) / stds
-        col_dict = {i: norm[i] for i in cols}
-        norm_df = input_df.assign(**col_dict)
+            # need to generate the random projection
+            if 'seed' in self.conf:
+                cp.random.seed(self.conf['seed'])
+            proj_data = cp.random.rand(len(cols), self.conf['out_dimension'])
+
+        output_matrix = input_df[cols].values.dot(proj_data)
+        col_dict = {'em'+str(i): output_matrix[:, i]
+                    for i in range(proj_data.shape[1])}
+        # output_df = input_df[input_df.columns.difference(cols)]
+        output_df = input_df.assign(**col_dict)
         output = {}
         if self.outport_connected(self.OUTPUT_PORT_NAME):
-            output.update({self.OUTPUT_PORT_NAME: norm_df})
-        if self.outport_connected(self.OUTPUT_NORM_MODEL_NAME):
-            norm_data = {"mean": means, "std": stds}
-            payload = NormalizationData(norm_data)
-            output.update({self.OUTPUT_NORM_MODEL_NAME: payload})
+            output.update({self.OUTPUT_PORT_NAME: output_df})
+        if self.outport_connected(self.OUTPUT_PROJ_NAME):
+            payload = ProjectionData(proj_data)
+            output.update({self.OUTPUT_PROJ_NAME: payload})
         return output
