@@ -232,8 +232,8 @@ class LinearEmbeddingNode(Node, _PortTypesMixin):
                 cp.random.seed(self.conf['seed'])
             proj_data = cp.random.rand(len(cols), self.conf['out_dimension'])
         cols.sort()
-        print(self.uid, cols)
-        print(self.uid, proj_data)
+        # print(self.uid, cols)
+        # print(self.uid, proj_data)
         output_matrix = input_df[cols].values.dot(proj_data)
         col_dict = {'em'+str(i): output_matrix[:, i]
                     for i in range(proj_data.shape[1])}
