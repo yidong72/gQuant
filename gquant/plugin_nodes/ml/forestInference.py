@@ -92,6 +92,7 @@ class ForestInferenceNode(Node, _PortTypesMixin):
             return output_cols
         elif (self.INPUT_PORT_NAME in input_columns and
               self.INPUT_PORT_MODEL_NAME not in input_columns):
+            cols_required = {}
             col_from_inport = input_columns[self.INPUT_PORT_NAME]
             enums = [col for col in col_from_inport.keys()]
             if 'columns' in self.conf:
@@ -100,7 +101,6 @@ class ForestInferenceNode(Node, _PortTypesMixin):
                 else:
                     included_colums = [col for col in enums
                                        if col not in self.conf['columns']]
-                cols_required = {}
                 for col in included_colums:
                     if col in col_from_inport:
                         cols_required[col] = col_from_inport[col]

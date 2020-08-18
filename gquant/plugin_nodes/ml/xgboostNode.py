@@ -243,7 +243,7 @@ class TrainXGBoostNode(Node, _PortTypesMixin):
                     }
                 }
             },
-            "required": ["target", "num_of_rounds", "columns"],
+            "required": [],
         }
         ui = {}
         input_columns = self.get_input_columns()
