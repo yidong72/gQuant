@@ -81,16 +81,17 @@ class LinearEmbeddingNode(Node, _PortTypesMixin):
         if (self.INPUT_PROJ_NAME in input_columns and
                 self.INPUT_PORT_NAME in input_columns):
             cols_required = copy.copy(input_columns[self.INPUT_PROJ_NAME])
-            out_dim = cols_required[SPECIAL_OUTPUT_DIM_COL]
-            del cols_required[SPECIAL_OUTPUT_DIM_COL]
             self.required = {
                 self.INPUT_PORT_NAME: cols_required,
                 self.INPUT_PROJ_NAME: cols_required
             }
             col_from_inport = input_columns[self.INPUT_PORT_NAME]
-            cols = ['em'+str(i) for i in range(out_dim)]
-            for col in cols:
-                col_from_inport[col] = None
+            if SPECIAL_OUTPUT_DIM_COL in cols_required:
+                out_dim = cols_required[SPECIAL_OUTPUT_DIM_COL]
+                del cols_required[SPECIAL_OUTPUT_DIM_COL]
+                cols = ['em'+str(i) for i in range(out_dim)]
+                for col in cols:
+                    col_from_inport[col] = None
             output_cols = {
                 self.OUTPUT_PORT_NAME: col_from_inport,
                 self.OUTPUT_PROJ_NAME: cols_required
@@ -99,16 +100,17 @@ class LinearEmbeddingNode(Node, _PortTypesMixin):
         elif (self.INPUT_PROJ_NAME in input_columns and
               self.INPUT_PORT_NAME not in input_columns):
             cols_required = copy.copy(input_columns[self.INPUT_PROJ_NAME])
-            out_dim = cols_required[SPECIAL_OUTPUT_DIM_COL]
-            del cols_required[SPECIAL_OUTPUT_DIM_COL]
             self.required = {
                 self.INPUT_PORT_NAME: cols_required,
                 self.INPUT_PROJ_NAME: cols_required
             }
             output = copy.copy(cols_required) 
-            cols = ['em'+str(i) for i in range(out_dim)]
-            for col in cols:
-                output[col] = None
+            if SPECIAL_OUTPUT_DIM_COL in cols_required:
+                out_dim = cols_required[SPECIAL_OUTPUT_DIM_COL]
+                del cols_required[SPECIAL_OUTPUT_DIM_COL]
+                cols = ['em'+str(i) for i in range(out_dim)]
+                for col in cols:
+                    output[col] = None
             output_cols = {
                 self.OUTPUT_PORT_NAME: output,
                 self.OUTPUT_PROJ_NAME: cols_required
@@ -223,12 +225,15 @@ class LinearEmbeddingNode(Node, _PortTypesMixin):
             if self.conf.get('include', True):
                 cols = self.conf['columns']
             else:
-                cols = input_df.columns.difference(self.conf['columns'])
+                cols = input_df.columns.difference(
+                    self.conf['columns']).values.tolist()
             # need to generate the random projection
             if 'seed' in self.conf:
                 cp.random.seed(self.conf['seed'])
             proj_data = cp.random.rand(len(cols), self.conf['out_dimension'])
-
+        cols.sort()
+        print(self.uid, cols)
+        print(self.uid, proj_data)
         output_matrix = input_df[cols].values.dot(proj_data)
         col_dict = {'em'+str(i): output_matrix[:, i]
                     for i in range(proj_data.shape[1])}

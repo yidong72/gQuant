@@ -197,6 +197,7 @@ class ForestInferenceNode(Node, _PortTypesMixin):
                 else:
                     train_cols = [col for col in data_df.columns
                                   if col not in self.conf['columns']]
+        train_cols.sort()
         fm = ForestInference.load(filename)
         prediction = fm.predict(data_df[train_cols])
         prediction.index = data_df.index

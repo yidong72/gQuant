@@ -273,8 +273,7 @@ class TrainXGBoostNode(Node, _PortTypesMixin):
             included_colums = [col for col in input_df.columns
                                if col not in self.conf['columns']]
         train_cols = [col for col in included_colums if col !=self.conf['target']]
-        # list(set(included_colums) - set([self.conf['target']]))
-        # train_cols.sort()
+        train_cols.sort()
 
         if isinstance(input_df, dask_cudf.DataFrame):
             # get the client
@@ -407,6 +406,7 @@ class InferXGBoostNode(Node, _PortTypesMixin):
         required_cols = input_columns[
             self.INPUT_PORT_MODEL_NAME]['train']
         required_cols = list(required_cols.keys())
+        required_cols.sort()
         predict_col = self.conf.get('prediction', 'predict')
         if isinstance(input_df, dask_cudf.DataFrame):
             # get the client
