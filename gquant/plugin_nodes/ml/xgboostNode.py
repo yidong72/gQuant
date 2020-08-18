@@ -59,6 +59,9 @@ class TrainXGBoostNode(Node, _PortTypesMixin):
         if self.INPUT_PORT_NAME in input_columns:
             col_from_inport = input_columns[self.INPUT_PORT_NAME]
             enums = [col for col in col_from_inport.keys()]
+            cols_output = {}
+            cols_output['train'] = OrderedDict()
+            cols_output['label'] = OrderedDict()
             if 'columns' in self.conf:
                 if self.conf.get('include', True):
                     included_colums = self.conf['columns']
@@ -66,9 +69,6 @@ class TrainXGBoostNode(Node, _PortTypesMixin):
                     included_colums = [col for col in enums
                                        if col not in self.conf['columns']]
                 cols_required = {}
-                cols_output = {}
-                cols_output['train'] = OrderedDict()
-                cols_output['label'] = OrderedDict()
                 for col in included_colums:
                     if col in col_from_inport:
                         cols_required[col] = col_from_inport[col]
