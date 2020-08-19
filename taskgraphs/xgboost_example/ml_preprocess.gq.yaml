@@ -2,8 +2,8 @@
   type: Output Collector
   conf: {}
   inputs:
-    in1: drop_train.out
-    in2: drop_test.out
+    in1: train_norm.df_out
+    in2: test_norm.df_out
 - id: data_generator
   type: CompositeNode
   conf:
@@ -31,7 +31,7 @@
           dtype: float64
           n_parts: 4
           random_state: 10
-    taskgraph: data_generator.gq.yaml
+    taskgraph: taskgraphs/xgboost_example/data_generator.gq.yaml
   inputs: {}
 - id: data_splitter
   type: DataSplittingNode
@@ -59,56 +59,3 @@
   inputs:
     norm_data_in: train_norm.norm_data_out
     df_in: data_splitter.test
-- id: train_proj
-  type: LinearEmbeddingNode
-  conf:
-    columns:
-      - y
-    include: false
-    out_dimension: 5
-    seed: 10
-  inputs:
-    df_in: train_norm.df_out
-- id: test_proj
-  type: LinearEmbeddingNode
-  conf:
-    include: true
-  inputs:
-    proj_data_in: train_proj.proj_data_out
-    df_in: test_norm.df_out
-- id: drop_test
-  type: DropNode
-  conf:
-    columns:
-      - x3_0
-      - x3_1
-      - x2_0
-      - x2_1
-      - x0
-      - x1
-      - x4
-      - x5
-      - x6
-      - x7
-      - x8
-      - x9
-  inputs:
-    in: test_proj.df_out
-- id: drop_train
-  type: DropNode
-  conf:
-    columns:
-      - x3_0
-      - x3_1
-      - x2_0
-      - x2_1
-      - x0
-      - x1
-      - x4
-      - x5
-      - x6
-      - x7
-      - x8
-      - x9
-  inputs:
-    in: train_proj.df_out

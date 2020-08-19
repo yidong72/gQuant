@@ -53,7 +53,7 @@
           dtype: float64
           n_parts: 4
           random_state: 10
-    taskgraph: data_generator.gq.yaml
+    taskgraph: taskgraphs/xgboost_example/data_generator.gq.yaml
   inputs:
     x2_to_sign@in: data_gen.cudf_out
 - id: data_splitter

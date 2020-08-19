@@ -54,7 +54,7 @@
           dtype: float64
           n_parts: 4
           random_state: 10
-    taskgraph: data_generator.gq.yaml
+    taskgraph: taskgraphs/xgboost_example/data_generator.gq.yaml
   inputs:
     x2_to_sign@in: data_gen.dask_cudf_out
 - id: xgboost_model
@@ -68,7 +68,7 @@
       - test_infer.out
       - train_xgboost.model_out
     subnodes_conf: {}
-    taskgraph: xgboost_model.gq.yaml
+    taskgraph: taskgraphs/xgboost_example/xgboost_model.gq.yaml
   inputs:
     test_norm@df_in: data_splitter.test
     train_norm@df_in: data_splitter.train
