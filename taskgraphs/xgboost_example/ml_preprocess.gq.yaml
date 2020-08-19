@@ -1,0 +1,114 @@
+- id: ""
+  type: Output Collector
+  conf: {}
+  inputs:
+    in1: drop_train.out
+    in2: drop_test.out
+- id: data_generator
+  type: CompositeNode
+  conf:
+    output:
+      - drop_x2_x3.out
+    subnode_ids:
+      - data_gen
+    subnodes_conf:
+      data_gen:
+        conf:
+          n_samples: 10000
+          n_features: 10
+          n_informative: 4
+          n_redundant: 0
+          n_repeated: 0
+          n_classes: 2
+          n_clusters_per_class: 2
+          flip_y: 0.1
+          class_sep: 1
+          hypercube: true
+          shift: 0
+          scale: 1
+          shuffle: true
+          order: F
+          dtype: float64
+          n_parts: 4
+          random_state: 10
+    taskgraph: data_generator.gq.yaml
+  inputs: {}
+- id: data_splitter
+  type: DataSplittingNode
+  conf:
+    train_size: 0.8
+    target: y
+  inputs:
+    in: data_generator.drop_x2_x3@out
+- id: train_norm
+  type: NormalizationNode
+  conf:
+    columns:
+      - x3_0
+      - x3_1
+      - x2_0
+      - x2_1
+      - y
+    include: false
+  inputs:
+    df_in: data_splitter.train
+- id: test_norm
+  type: NormalizationNode
+  conf:
+    include: true
+  inputs:
+    norm_data_in: train_norm.norm_data_out
+    df_in: data_splitter.test
+- id: train_proj
+  type: LinearEmbeddingNode
+  conf:
+    columns:
+      - y
+    include: false
+    out_dimension: 5
+    seed: 10
+  inputs:
+    df_in: train_norm.df_out
+- id: test_proj
+  type: LinearEmbeddingNode
+  conf:
+    include: true
+  inputs:
+    proj_data_in: train_proj.proj_data_out
+    df_in: test_norm.df_out
+- id: drop_test
+  type: DropNode
+  conf:
+    columns:
+      - x3_0
+      - x3_1
+      - x2_0
+      - x2_1
+      - x0
+      - x1
+      - x4
+      - x5
+      - x6
+      - x7
+      - x8
+      - x9
+  inputs:
+    in: test_proj.df_out
+- id: drop_train
+  type: DropNode
+  conf:
+    columns:
+      - x3_0
+      - x3_1
+      - x2_0
+      - x2_1
+      - x0
+      - x1
+      - x4
+      - x5
+      - x6
+      - x7
+      - x8
+      - x9
+  inputs:
+    in: train_proj.df_out

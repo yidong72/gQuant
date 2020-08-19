@@ -1,0 +1,71 @@
+- id: ""
+  type: Output Collector
+  conf: {}
+  inputs:
+    in1: xgboost_model.train_infer@out
+    in2: xgboost_model.test_infer@out
+- id: data_generator
+  type: CompositeNode
+  conf:
+    output:
+      - drop_x2_x3.out
+    subnode_ids:
+      - data_gen
+    subnodes_conf:
+      data_gen:
+        conf:
+          n_samples: 10000
+          n_features: 10
+          n_informative: 4
+          n_redundant: 0
+          n_repeated: 0
+          n_classes: 2
+          n_clusters_per_class: 2
+          flip_y: 0.1
+          class_sep: 1
+          hypercube: true
+          shift: 0
+          scale: 1
+          shuffle: true
+          order: F
+          dtype: float64
+          n_parts: 4
+          random_state: 10
+    taskgraph: taskgraphs/xgboost_example/data_generator.gq.yaml
+  inputs: {}
+- id: data_splitter
+  type: DataSplittingNode
+  conf:
+    train_size: 0.8
+    target: y
+  inputs:
+    in: data_generator.drop_x2_x3@out
+- id: xgboost_model
+  type: CompositeNode
+  conf:
+    input:
+      - train_norm.df_in
+      - test_norm.df_in
+    output:
+      - train_infer.out
+      - test_infer.out
+      - train_xgboost.model_out
+    subnode_ids:
+      - train_norm
+    subnodes_conf:
+      train_norm:
+        conf:
+          columns:
+            - x0
+            - x1
+            - x4
+            - x5
+            - x6
+            - x7
+            - x8
+            - x9
+          include: true
+    taskgraph: taskgraphs/xgboost_example/xgboost_model.gq.yaml
+  inputs:
+    test_norm@df_in: data_splitter.test
+    train_norm@df_in: data_splitter.train
