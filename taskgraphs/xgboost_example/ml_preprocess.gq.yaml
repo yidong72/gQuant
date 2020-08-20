@@ -1,5 +1,5 @@
 - id: ""
-  type: Output Collector
+  type: Output_Collector
   conf: {}
   inputs:
     in1: train_norm.df_out

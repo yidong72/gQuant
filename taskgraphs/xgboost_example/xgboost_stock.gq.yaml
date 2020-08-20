@@ -5,7 +5,7 @@
     path: notebooks/many-small
   inputs: {}
 - id: ""
-  type: Output Collector
+  type: Output_Collector
   conf: {}
   inputs:
     in1: xzhw59pcyw.roc_curve

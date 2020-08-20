@@ -19,7 +19,7 @@
     n_parts: 4
   inputs: {}
 - id: ""
-  type: Output Collector
+  type: Output_Collector
   conf: {}
   inputs:
     in1: test_infer.out
