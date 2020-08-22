@@ -148,12 +148,12 @@ class TrainXGBoostNode(Node, _PortTypesMixin):
                         'min_child_weight': {
                             "type": "number",
                             "description": "Minimum sum of instance weight (hessian) needed in a child. If the tree partition step results in a leaf node with the sum of instance weight less than min_child_weight, then the building process will give up further partitioning. In linear regression task, this simply corresponds to minimum number of instances needed to be in each node. The larger min_child_weight is, the more conservative the algorithm will be.",
-                            "default": 1
+                            "default": 1.0
                         },
                         'subsample': {
                             "type": "number",
                             "description": "Subsample ratio of the training instances. Setting it to 0.5 means that XGBoost would randomly sample half of the training data prior to growing trees. and this will prevent overfitting. Subsampling will occur once in every boosting iteration.",
-                            "default": 1
+                            "default": 1.0
                         },
                         'sampling_method': {
                             "type": "string",
@@ -164,25 +164,25 @@ class TrainXGBoostNode(Node, _PortTypesMixin):
                         'colsample_bytree': {
                             "type": "number",
                             "description": "is the subsample ratio of columns when constructing each tree. Subsampling occurs once for every tree constructed.",
-                            "default": 1
+                            "default": 1.0
                         },
                         'colsample_bylevel': {
                             "type": "number",
                             "description": "is the subsample ratio of columns for each level. Subsampling occurs once for every new depth level reached in a tree. Columns are subsampled from the set of columns chosen for the current tree",
-                            "default": 1
+                            "default": 1.0
                         },
                         'colsample_bynode': {
                             "type": "number",
                             "description": " is the subsample ratio of columns for each node (split). Subsampling occurs once every time a new split is evaluated. Columns are subsampled from the set of columns chosen for the current level.",
-                            "default": 1
+                            "default": 1.0
                         },
                         'max_depth': {
-                            "type": "number",
+                            "type": "integer",
                             "description": "Maximum depth of a tree.",
                             "default": 8
                         },
                         "max_leaves": {
-                            "type": "number",
+                            "type": "integer",
                             "description": "maximum number of tree leaves",
                             "default": 2**8
                         },
@@ -197,17 +197,17 @@ class TrainXGBoostNode(Node, _PortTypesMixin):
                             "description": """Minimum loss reduction required
                             to make a further partition on a leaf node of the
                             tree.""",
-                            "default": 0
+                            "default": 0.0
                         },
                         "lambda": {
                             "type": "number",
                             "description": """L2 regularization term on weights. Increasing this value will make model more conservative.""",
-                            "default": 1
+                            "default": 1.0
                         },
                         "alpha": {
                             "type": "number",
                             "description": """L1 regularization term on weights. Increasing this value will make model more conservative.""",
-                            "default": 0
+                            "default": 0.0
                         },
                         "tree_method": {
                             "type": "string",

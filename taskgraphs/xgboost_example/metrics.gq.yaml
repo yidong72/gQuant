@@ -56,7 +56,7 @@
           random_state: 10
     taskgraph: taskgraphs/xgboost_example/data_generator.gq.yaml
   inputs:
-    x2_to_sign@in: data_gen.dask_cudf_out
+    x2_to_sign@in: data_gen.cudf_out
 - id: xgboost_model
   type: CompositeNode
   conf:
