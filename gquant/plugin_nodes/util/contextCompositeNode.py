@@ -1,6 +1,8 @@
 from .compositeNode import CompositeNode
 from gquant.dataframe_flow.cache import cache_schema
-from gquant.dataframe_flow.portsSpecSchema import ConfSchema
+from gquant.dataframe_flow.portsSpecSchema import (ConfSchema,
+                                                   PortsSpecSchema, NodePorts)
+from .data_obj import ConfData
 from .json_util import parse_config
 from jsonpath_ng import parse
 
@@ -8,11 +10,35 @@ __all__ = ["ContextCompositeNode"]
 
 
 class ContextCompositeNode(CompositeNode):
+
+    def init(self):
+        super().init()
+        self.INPUT_CONFIG = 'conf_in'
+        self.OUTPUT_CONFIG = 'conf_out'
+
+    def ports_setup(self):
+        ports = super().ports_setup()
+        port_type = PortsSpecSchema.port_type
+        inports = ports.inports
+        outports = ports.outports
+        inports[self.INPUT_CONFIG] = {
+            port_type: ConfData
+        }
+        outports[self.OUTPUT_CONFIG] = {
+            port_type: ConfData
+        }
+        output_port = NodePorts(inports=inports, outports=outports)
+        return output_port
+
+    def columns_setup(self):
+        out_columns = super().columns_setup()
+        out_columns[self.OUTPUT_CONFIG] = self.conf
+        return out_columns
+
     def conf_schema(self):
         cache_key, task_graph, replacementObj = self._compute_hash_key()
-        # if cache_key in cache_schema:
-        #     # print('cache hit')
-        #     return cache_schema[cache_key]
+        if cache_key in cache_schema:
+            return cache_schema[cache_key]
         json = {
             "title": "Context Composite Node configure",
             "type": "object",
@@ -164,6 +190,12 @@ class ContextCompositeNode(CompositeNode):
         cache_schema[cache_key] = out_schema
         return out_schema
 
+    def conf_update(self):
+        input_columns = self.get_input_columns()
+        if self.INPUT_CONFIG in input_columns:
+            if input_columns[self.INPUT_CONFIG]:
+                self.conf = input_columns[self.INPUT_CONFIG]
+
     def update_replace(self, replaceObj, task_graph):
         # find the other replacment conf
         if task_graph:
@@ -177,9 +209,21 @@ class ContextCompositeNode(CompositeNode):
                     replaceObj[newid] = {}
                     replaceObj[newid].update({'conf': conf})
         # replace the numbers from the context
-        for key in self.conf['context'].keys():
-            val = self.conf['context'][key]['value']
-            for map_obj in self.conf['context'][key]['map']:
-                xpath = map_obj['xpath']
-                expr = parse(xpath)
-                expr.update(replaceObj, val)
+        if 'context' in self.conf:
+            for key in self.conf['context'].keys():
+                val = self.conf['context'][key]['value']
+                for map_obj in self.conf['context'][key]['map']:
+                    xpath = map_obj['xpath']
+                    expr = parse(xpath)
+                    expr.update(replaceObj, val)
+
+    def process(self, inputs):
+        if self.INPUT_CONFIG in inputs:
+            self.conf = inputs[self.INPUT_CONFIG].data
+        output = {}
+        if self.outport_connected(self.OUTPUT_CONFIG):
+            conf = ConfData(self.conf)
+            output[self.OUTPUT_CONFIG] = conf
+        more_output = super().process(inputs)
+        output.update(more_output)
+        return output
