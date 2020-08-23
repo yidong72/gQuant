@@ -9,6 +9,12 @@ from jsonpath_ng import parse
 __all__ = ["ContextCompositeNode"]
 
 
+default_map = {
+    "boolean": False,
+    "number": 0.0,
+    "string": "a string"
+}
+
 class ContextCompositeNode(CompositeNode):
 
     def init(self):
@@ -67,7 +73,6 @@ class ContextCompositeNode(CompositeNode):
                     "description": "context parameters",
                     "additionalProperties": {
                                 "type": "object",
-                                "title": "parameter",
                                 "description": """The context parameters for this 
                                 composite node""",
                                 "properties": {
@@ -105,6 +110,7 @@ class ContextCompositeNode(CompositeNode):
                     },
                     "value": {
                         "type": ty_splits[0],
+                        "default": default_map[ty_splits[0]],
                         "description": "the value for this context parameter"
                     },
                     "map": {
