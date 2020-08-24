@@ -323,7 +323,7 @@ class GridRandomSearchNode(ContextCompositeNode):
         output = {}
         if self.outport_connected(self.OUTPUT_CONFIG):
             # here we need to do the hyper parameter search
-            def search_fun(config):
+            def search_fun(config, checkpoint_dir=None):
                 task_graph = TaskGraph.load_taskgraph(
                     get_file_path(self.conf['taskgraph']))
                 task_graph.build()
@@ -375,8 +375,8 @@ class GridRandomSearchNode(ContextCompositeNode):
                     for inp in inputNode.inputs:
                         if inp['to_port'] not in in_ports:
                             # need to keep the old connections
-                            newInputs[inp['to_port']] = (inp['from_node'].uid
-                                                         + '.' + inp['from_port'])
+                            newInputs[inp['to_port']] = (
+                                inp['from_node'].uid + '.' + inp['from_port'])
                     replaceObj.update({inputNode.uid: {
                         TaskSpecSchema.inputs: newInputs}
                     })

@@ -163,7 +163,7 @@ RUN jupyter labextension install dask-labextension
 RUN jupyter serverextension enable dask_labextension
 
 ## install the jsonpath lib
-RUN pip install jsonpath-ng ray
+RUN pip install jsonpath-ng ray[tune]
 
 RUN mkdir -p /home/quant/gQuant
 WORKDIR /home/quant/gQuant
