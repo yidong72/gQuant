@@ -9,6 +9,7 @@ from gquant.dataframe_flow.taskSpecSchema import TaskSpecSchema
 from ray import tune
 from jsonpath_ng import parse
 import uuid
+from ray.tune import Analysis
 
 __all__ = ["GridRandomSearchNode"]
 
@@ -17,9 +18,8 @@ class GridRandomSearchNode(ContextCompositeNode):
 
     def conf_schema(self):
         cache_key, task_graph, replacementObj = self._compute_hash_key()
-        #print('id', self.uid, self.conf)
         if cache_key in cache_schema:
-             return cache_schema[cache_key]
+            return cache_schema[cache_key]
         # get's the input when it gets the conf
         input_columns = self.get_input_columns()
         json = {}
@@ -337,6 +337,26 @@ class GridRandomSearchNode(ContextCompositeNode):
         cache_schema[cache_key] = out_schema
         return out_schema
 
+    def columns_setup(self):
+        out_columns = super().columns_setup()
+        if 'tune' in self.conf:
+            if 'local_dir' in self.conf['tune']:
+                path = self.conf['tune']['local_dir']
+                if 'name' in self.conf['tune']:
+                    exp = self.conf['tune']['name']
+                    try:
+                        analysis = Analysis(path+'/'+exp)
+                        if 'best' in self.conf:
+                            best = analysis.get_best_config(
+                                **self.conf['best'])
+                            for key in best.keys():
+                                self.conf['context'][key]['value'] = best[key]
+                            print('get best', best)
+                            out_columns[self.OUTPUT_CONFIG] = self.conf
+                    except Exception:
+                        pass
+        return out_columns
+
     def process(self, inputs):
         if self.INPUT_CONFIG in inputs:
             self.conf.update(inputs[self.INPUT_CONFIG].data)
@@ -344,7 +364,6 @@ class GridRandomSearchNode(ContextCompositeNode):
         if self.outport_connected(self.OUTPUT_CONFIG):
             # here we need to do the hyper parameter search
             def search_fun(config, checkpoint_dir=None):
-                #print('config in fun', config)
                 task_graph = TaskGraph.load_taskgraph(
                     get_file_path(self.conf['taskgraph']))
                 task_graph.build()
@@ -404,7 +423,6 @@ class GridRandomSearchNode(ContextCompositeNode):
 
                 def outNode_fun(outNode, out_ports):
                     pass
-                
                 outputLists = self.conf['metrics']
 
                 self._make_sub_graph_connection(task_graph,
@@ -415,16 +433,14 @@ class GridRandomSearchNode(ContextCompositeNode):
                 result = task_graph.run(outputLists, replace=replaceObj)
                 metric_report = {item: result[item] for item in outputLists}
                 tune.report(**metric_report)
-            
             config = {}
             for para in self.conf['parameters']:
                 fun_name = para['search']['function']
                 fun = getattr(tune, fun_name)
                 if fun_name == 'grid_search' or fun_name == 'choice':
-                    config[para['name']] = fun(para['search']['args']) 
+                    config[para['name']] = fun(para['search']['args'])
                 else:
-                    config[para['name']] = fun(*para['search']['args']) 
-            outputLists = self.conf['metrics']
+                    config[para['name']] = fun(*para['search']['args'])
             analysis = tune.run(search_fun, **self.conf['tune'], config=config)
             best = analysis.get_best_config(**self.conf['best'])
             for key in best.keys():
