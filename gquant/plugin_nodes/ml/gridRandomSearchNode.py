@@ -17,9 +17,9 @@ class GridRandomSearchNode(ContextCompositeNode):
 
     def conf_schema(self):
         cache_key, task_graph, replacementObj = self._compute_hash_key()
-        print('id', self.uid, self.conf)
-        # if cache_key in cache_schema:
-        #     return cache_schema[cache_key]
+        #print('id', self.uid, self.conf)
+        if cache_key in cache_schema:
+             return cache_schema[cache_key]
         # get's the input when it gets the conf
         input_columns = self.get_input_columns()
         json = {}
@@ -221,8 +221,26 @@ class GridRandomSearchNode(ContextCompositeNode):
                         },
                         "metrics": {
                             "type": "array",
+                            "description": """the metrics that is going to be
+                             recorded""",
                             "items": {
                                 "type": "string"
+                            },
+                            "default": []
+                        },
+                        "best": {
+                            "description": """the metric that is used for
+                             best configuration""",
+                            "type": "object",
+                            "properties": {
+                                "metric": {
+                                    "type": "string"
+                                },
+                                "mode": {
+                                    "type": "string",
+                                    "enum": ['min', 'max'],
+                                    "default": 'max'
+                                }
                             }
                         },
                         "tune": {
@@ -290,6 +308,8 @@ class GridRandomSearchNode(ContextCompositeNode):
                         context.keys())
                 json['properties']['metrics'][
                     'items']['enum'] = metrics
+                json['properties']['best'][
+                    'properties']['metric']['enum'] = self.conf['metrics']
                 options = json['properties']['parameters'][
                     'items']['dependencies']['name']['oneOf']
                 for var in context.keys():
@@ -324,6 +344,7 @@ class GridRandomSearchNode(ContextCompositeNode):
         if self.outport_connected(self.OUTPUT_CONFIG):
             # here we need to do the hyper parameter search
             def search_fun(config, checkpoint_dir=None):
+                #print('config in fun', config)
                 task_graph = TaskGraph.load_taskgraph(
                     get_file_path(self.conf['taskgraph']))
                 task_graph.build()
@@ -403,10 +424,9 @@ class GridRandomSearchNode(ContextCompositeNode):
                     config[para['name']] = fun(para['search']['args']) 
                 else:
                     config[para['name']] = fun(*para['search']['args']) 
-
             outputLists = self.conf['metrics']
-            analysis = tune.run(search_fun, **self.conf['tune'])
-            best = analysis.get_best_config(metric=outputLists[0])
+            analysis = tune.run(search_fun, **self.conf['tune'], config=config)
+            best = analysis.get_best_config(**self.conf['best'])
             for key in best.keys():
                 self.conf['context'][key]['value'] = best[key]
             output[self.OUTPUT_CONFIG] = self.conf
