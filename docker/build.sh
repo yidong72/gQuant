@@ -110,7 +110,7 @@ EXPOSE 8888
 EXPOSE 8787
 EXPOSE 8786
 RUN apt-get update
-RUN apt-get install -y curl git net-tools iproute2 vim wget locales-all build-essential libfontconfig1 libxrender1 \
+RUN apt-get install -y curl git net-tools iproute2 vim wget locales-all build-essential libfontconfig1 libxrender1 rsync \
         && rm -rf /var/lib/apt/lists/*
 
 RUN mkdir /.local /.jupyter /.config /.cupy \
