@@ -2,7 +2,7 @@ from gquant.dataframe_flow import Node
 from bqplot import Axis, LinearScale,  Figure, Lines, PanZoom
 import dask_cudf
 import cudf
-from gquant.dataframe_flow.portsSpecSchema import ConfSchema
+from gquant.dataframe_flow.portsSpecSchema import ConfSchema, PortsSpecSchema
 from gquant.dataframe_flow._port_type_node import _PortTypesMixin
 from sklearn import metrics
 
@@ -12,6 +12,7 @@ class RocCurveNode(Node, _PortTypesMixin):
     def init(self):
         self.INPUT_PORT_NAME = 'in'
         self.OUTPUT_PORT_NAME = 'roc_curve'
+        self.OUTPUT_VALUE_NAME = 'value'
 
     def columns_setup(self):
         cols_required = {}
@@ -22,11 +23,13 @@ class RocCurveNode(Node, _PortTypesMixin):
         self.required = {
             self.INPUT_PORT_NAME: cols_required
         }
-        return {self.OUTPUT_PORT_NAME: {}}
+        return {self.OUTPUT_PORT_NAME: {}, self.OUTPUT_VALUE_NAME: {}}
 
     def ports_setup(self):
-        return _PortTypesMixin.ports_setup_different_output_type(self,
-                                                                 Figure)
+        ports = _PortTypesMixin.ports_setup_different_output_type(self, Figure)
+        ports.outports[self.OUTPUT_VALUE_NAME] = {PortsSpecSchema.port_type:
+                                                  float}
+        return ports
 
     def conf_schema(self):
         json = {
@@ -74,27 +77,34 @@ class RocCurveNode(Node, _PortTypesMixin):
         if isinstance(input_df,  dask_cudf.DataFrame):
             input_df = input_df.compute()  # get the computed value
 
-        linear_x = LinearScale()
-        linear_y = LinearScale()
-        yax = Axis(label='True Positive Rate', scale=linear_x,
-                   orientation='vertical')
-        xax = Axis(label='False Positive Rate', scale=linear_y,
-                   orientation='horizontal')
-        panzoom_main = PanZoom(scales={'x': [linear_x]})
-
         label_col = input_df[self.conf['label']].values
         pred_col = input_df[self.conf['prediction']].values
+
         if isinstance(input_df, cudf.DataFrame):
             fpr, tpr, _ = metrics.roc_curve(label_col.get(),
                                             pred_col.get())
         else:
             fpr, tpr, _ = metrics.roc_curve(label_col,
                                             pred_col)
-        curve_label = 'ROC (area = {:.2f})'.format(metrics.auc(fpr, tpr))
-        line = Lines(x=fpr, y=tpr,
-                     scales={'x': linear_x, 'y': linear_y},
-                     colors=['blue'], labels=[curve_label],
-                     display_legend=True)
-        new_fig = Figure(marks=[line], axes=[yax, xax], title='ROC Curve',
-                         interaction=panzoom_main)
-        return {self.OUTPUT_PORT_NAME: new_fig}
+        auc_value = metrics.auc(fpr, tpr)
+        out = {}
+
+        if self.outport_connected(self.OUTPUT_PORT_NAME):
+            linear_x = LinearScale()
+            linear_y = LinearScale()
+            yax = Axis(label='True Positive Rate', scale=linear_x,
+                       orientation='vertical')
+            xax = Axis(label='False Positive Rate', scale=linear_y,
+                       orientation='horizontal')
+            panzoom_main = PanZoom(scales={'x': [linear_x]})
+            curve_label = 'ROC (area = {:.2f})'.format(auc_value)
+            line = Lines(x=fpr, y=tpr,
+                         scales={'x': linear_x, 'y': linear_y},
+                         colors=['blue'], labels=[curve_label],
+                         display_legend=True)
+            new_fig = Figure(marks=[line], axes=[yax, xax], title='ROC Curve',
+                             interaction=panzoom_main)
+            out.update({self.OUTPUT_PORT_NAME: new_fig})
+        if self.outport_connected(self.OUTPUT_VALUE_NAME):
+            out.update({self.OUTPUT_VALUE_NAME: float(auc_value)})
+        return out

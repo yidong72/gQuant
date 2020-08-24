@@ -12,7 +12,8 @@ __all__ = ["ContextCompositeNode"]
 default_map = {
     "boolean": False,
     "number": 0.0,
-    "string": "a string"
+    "string": "a string",
+    "array": []
 }
 
 class ContextCompositeNode(CompositeNode):
