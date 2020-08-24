@@ -9,7 +9,16 @@ from gquant.dataframe_flow.taskSpecSchema import TaskSpecSchema
 from ray import tune
 from jsonpath_ng import parse
 import uuid
+import ray
 from ray.tune import Analysis
+import cudf
+import pandas
+import ray
+
+ray.init(ignore_reinit_error=True,
+         dashboard_host='0.0.0.0')
+
+#ray.init(redis_max_memory=10**8)
 
 __all__ = ["GridRandomSearchNode"]
 
@@ -362,8 +371,24 @@ class GridRandomSearchNode(ContextCompositeNode):
             self.conf.update(inputs[self.INPUT_CONFIG].data)
         output = {}
         if self.outport_connected(self.OUTPUT_CONFIG):
+            data_store = {}
+            for key in inputs.keys():
+                v = inputs[key]
+                if isinstance(v, cudf.DataFrame):
+                    # it is a work around,
+                    # the ray.put doesn't support GPU cudf
+                    data_store[key] = ray.put(v.to_pandas())
+                else:
+                    data_store[key] = ray.put(v)
             # here we need to do the hyper parameter search
             def search_fun(config, checkpoint_dir=None):
+                myinputs = {}
+                for key in data_store.keys():
+                    v = ray.get(data_store[key])
+                    if isinstance(v, pandas.DataFrame):
+                        myinputs[key] = cudf.from_pandas(v)
+                    else:
+                        myinputs[key] = v
                 task_graph = TaskGraph.load_taskgraph(
                     get_file_path(self.conf['taskgraph']))
                 task_graph.build()
@@ -396,8 +421,8 @@ class GridRandomSearchNode(ContextCompositeNode):
                         def process(self, empty):
                             output = {}
                             for key in inports.keys():
-                                if inputNode.uid+'@'+key in inputs:
-                                    output[key] = inputs[inputNode.uid+'@'+key]
+                                if inputNode.uid+'@'+key in myinputs:
+                                    output[key] = myinputs[inputNode.uid+'@'+key]
                             return output
 
                     uni_id = str(uuid.uuid1())
@@ -410,7 +435,7 @@ class GridRandomSearchNode(ContextCompositeNode):
                     input_feeders.append(obj)
                     newInputs = {}
                     for key in inports.keys():
-                        if inputNode.uid+'@'+key in inputs:
+                        if inputNode.uid+'@'+key in myinputs:
                             newInputs[key] = uni_id+'.'+key
                     for inp in inputNode.inputs:
                         if inp['to_port'] not in in_ports:
