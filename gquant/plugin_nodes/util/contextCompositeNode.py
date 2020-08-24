@@ -201,7 +201,7 @@ class ContextCompositeNode(CompositeNode):
         input_columns = self.get_input_columns()
         if self.INPUT_CONFIG in input_columns:
             if input_columns[self.INPUT_CONFIG]:
-                self.conf = input_columns[self.INPUT_CONFIG]
+                self.conf.update(input_columns[self.INPUT_CONFIG])
 
     def update_replace(self, replaceObj, task_graph):
         # find the other replacment conf
@@ -226,7 +226,7 @@ class ContextCompositeNode(CompositeNode):
 
     def process(self, inputs):
         if self.INPUT_CONFIG in inputs:
-            self.conf = inputs[self.INPUT_CONFIG].data
+            self.conf.update(inputs[self.INPUT_CONFIG].data)
         output = {}
         if self.outport_connected(self.OUTPUT_CONFIG):
             conf = ConfData(self.conf)

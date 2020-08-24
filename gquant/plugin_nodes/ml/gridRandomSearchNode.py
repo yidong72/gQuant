@@ -1,5 +1,14 @@
 from ..util.contextCompositeNode import ContextCompositeNode
-from gquant.dataframe_flow.portsSpecSchema import ConfSchema
+from gquant.dataframe_flow.portsSpecSchema import (ConfSchema,
+                                                   PortsSpecSchema, NodePorts)
+from gquant.dataframe_flow.cache import cache_schema
+from gquant.dataframe_flow import TaskGraph
+from gquant.dataframe_flow import Node
+from gquant.dataframe_flow.util import get_file_path
+from gquant.dataframe_flow.taskSpecSchema import TaskSpecSchema
+from ray import tune
+from jsonpath_ng import parse
+import uuid
 
 __all__ = ["GridRandomSearchNode"]
 
@@ -7,6 +16,10 @@ __all__ = ["GridRandomSearchNode"]
 class GridRandomSearchNode(ContextCompositeNode):
 
     def conf_schema(self):
+        cache_key, task_graph, replacementObj = self._compute_hash_key()
+        print('id', self.uid, self.conf)
+        # if cache_key in cache_schema:
+        #     return cache_schema[cache_key]
         # get's the input when it gets the conf
         input_columns = self.get_input_columns()
         json = {}
@@ -19,29 +32,34 @@ class GridRandomSearchNode(ContextCompositeNode):
                             "type": "object",
                             "oneOf": [
                                   {
-                                      "title": 'randn',
-                                      "description": """Wraps tune.sample_from around np.random.randn.
-                                       tune.randn(10) is equivalent to np.random.randn(10)""",
-                                      "properties": {
-                                          "function": {
-                                              "type": "string",
-                                              "enum": ['randn'],
-                                              "default": 'randn'
-                                          },
-                                          "args": {
-                                              "type": "array",
-                                              "items": [
-                                                      {
-                                                          "type": "number",
-                                                          "default": 1.0
-                                                      }
-                                              ]
-                                          }
-                                      }
+                                    "title": 'randn',
+                                    "description": """Wraps
+                                     tune.sample_from around
+                                     np.random.randn.
+                                     tune.randn(10)
+                                      is equivalent to
+                                      np.random.randn(10)""",
+                                    "properties": {
+                                        "function": {
+                                            "type": "string",
+                                            "enum": ['randn'],
+                                            "default": 'randn'
+                                        },
+                                        "args": {
+                                            "type": "array",
+                                            "items": [
+                                               {
+                                                   "type": "number",
+                                                   "default": 1.0
+                                               }
+                                            ]
+                                        }
+                                    }
                                   },
                                 {
-                                    "title": "uniform",
-                                      "description": """Wraps tune.sample_from around np.random.uniform""",
+                                      "title": "uniform",
+                                      "description": """Wraps tune.sample_from
+                                    around np.random.uniform""",
                                       "properties": {
                                           "function": {
                                               "type": "string",
@@ -51,53 +69,56 @@ class GridRandomSearchNode(ContextCompositeNode):
                                           "args": {
                                               "type": "array",
                                               "items": [
-                                                      {
-                                                          "type": "number",
-                                                          "default": 0.0
-                                                      },
                                                   {
-                                                          "type": "number",
-                                                          "default": 10.0
+                                                      "type": "number",
+                                                      "default": 0.0
+                                                  },
+                                                  {
+                                                      "type": "number",
+                                                      "default": 10.0
                                                   }
                                               ]
                                           }
-
                                       }
                                   },
                                 {
                                     "title": "loguniform",
-                                      "description": """Sugar for sampling in different orders of magnitude.,
-                                      parameters, min_bound – Lower boundary of the output interval,
-                                      max_bound (float) – Upper boundary of the output interval (1e-2), 
-                                      base – Base of the log. Defaults to 10.""",
-                                      "properties": {
-                                          "function": {
-                                              "type": "string",
-                                              "enum": ['loguniform'],
-                                              "default": 'loguniform'
-                                          },
-                                          "args": {
-                                              "type": "array",
-                                              "items": [
-                                                      {
-                                                          "type": "number",
-                                                          "default": 1e-4
-                                                      },
-                                                  {
-                                                          "type": "number",
-                                                          "default": 1e-2
-                                                  },
-                                                  {
-                                                          "type": "number",
-                                                          "default": 10
-                                                  }
-                                              ]
-                                          }
-                                      }
+                                    "description": """Sugar for sampling
+                                    in different orders of magnitude.,
+                                    parameters, min_bound – Lower
+                                    boundary of the output interval,
+                                    max_bound (float) – Upper boundary
+                                    of the output interval (1e-2),
+                                    base – Base of the log.""",
+                                    "properties": {
+                                        "function": {
+                                            "type": "string",
+                                            "enum": ['loguniform'],
+                                            "default": 'loguniform'
+                                        },
+                                        "args": {
+                                            "type": "array",
+                                            "items": [
+                                                {
+                                                    "type": "number",
+                                                    "default": 1e-4
+                                                },
+                                                {
+                                                    "type": "number",
+                                                    "default": 1e-2
+                                                },
+                                                {
+                                                    "type": "number",
+                                                    "default": 10
+                                                }
+                                            ]
+                                        }
+                                    }
                                   },
                                 {
                                     "title": "choice",
-                                   "description": """Wraps tune.sample_from around random.choice.""",
+                                      "description": """Wraps tune.sample_from
+                                    around random.choice.""",
                                       "properties": {
                                           "function": {
                                               "type": "string",
@@ -114,7 +135,8 @@ class GridRandomSearchNode(ContextCompositeNode):
                                   },
                                 {
                                     "title": "grid_search",
-                                   "description": """Convenience method for specifying grid search over a value.""",
+                                      "description": """Convenience method for
+                                    specifying grid search over a value.""",
                                       "properties": {
                                           "function": {
                                               "type": "string",
@@ -136,7 +158,8 @@ class GridRandomSearchNode(ContextCompositeNode):
                             "oneOf": [
                                   {
                                     "title": "choice",
-                                   "description": """Wraps tune.sample_from around random.choice.""",
+                                      "description": """Wraps tune.sample_from
+                                    around random.choice.""",
                                       "properties": {
                                           "function": {
                                               "type": "string",
@@ -154,7 +177,8 @@ class GridRandomSearchNode(ContextCompositeNode):
                                   },
                                 {
                                     "title": "grid_search",
-                                   "description": """Convenience method for specifying grid search over a value.""",
+                                      "description": """Convenience method for
+                                    specifying grid search over a value.""",
                                       "properties": {
                                           "function": {
                                               "type": "string",
@@ -174,7 +198,8 @@ class GridRandomSearchNode(ContextCompositeNode):
                         }
                     },
                     "description": """
-                    Use Tune to specify a grid search or random search for a context composite node.
+                    Use Tune to specify a grid search
+                    or random search for a context composite node.
                     """,
                     "type": "object",
                     "properties": {
@@ -194,6 +219,12 @@ class GridRandomSearchNode(ContextCompositeNode):
                                 }
                             },
                         },
+                        "metrics": {
+                            "type": "array",
+                            "items": {
+                                "type": "string"
+                            }
+                        },
                         "tune": {
                             "type": "object",
                             "properties": {
@@ -212,21 +243,21 @@ class GridRandomSearchNode(ContextCompositeNode):
                                 "num_samples": {
                                     "type": "number",
                                     "description": """
-                                     Number of times to sample from the hyperparameter 
-                                     space. Defaults to 1. If grid_search is provided 
-                                     as an argument, the grid will be repeated
-                                      num_samples of times.
+                                     Number of times to sample from
+                                     the hyperparameter space.
+                                     If grid_search is provided
+                                     as an argument, the grid will be
+                                     repeated num_samples of times.
                                     """,
                                     "default": 1
                                 },
                                 "resources_per_trial": {
                                     "type": "object",
                                     "description": """
-                                    Machine resources to allocate per trial, e.g.
-                                     {"cpu": 64, "gpu": 8}. Note that GPUs will 
-                                     not be assigned unless you specify them here.
-                                      Defaults to 1 CPU and 0 GPUs 
-                                    """,
+                                    Machine resources to allocate per trial,
+                                     e.g. {"cpu": 64, "gpu": 8}. Note that
+                                     GPUs will not be assigned unless you
+                                     specify them here.""",
                                     "properties": {
                                         "cpu": {
                                             "type": 'number',
@@ -242,9 +273,23 @@ class GridRandomSearchNode(ContextCompositeNode):
                         }
                     }
                 }
+                metrics = []
+                task_graph.build(replace=replacementObj)
+                for t in task_graph:
+                    node_id = t.get('id')
+                    if node_id != '':
+                        node = task_graph[node_id]
+                        all_ports = node.ports_setup()
+                        for port in all_ports.outports.keys():
+                            if all_ports.outports[port][
+                                    PortsSpecSchema.port_type] == float:
+                                metrics.append(node_id+'.'+port)
                 context = conf['context']
                 json['properties']['parameters'][
-                    'items']['properties']['name']['enum'] = list(context.keys())
+                    'items']['properties']['name']['enum'] = list(
+                        context.keys())
+                json['properties']['metrics'][
+                    'items']['enum'] = metrics
                 options = json['properties']['parameters'][
                     'items']['dependencies']['name']['oneOf']
                 for var in context.keys():
@@ -269,4 +314,125 @@ class GridRandomSearchNode(ContextCompositeNode):
             }
         }
         out_schema = ConfSchema(json=json, ui=ui)
+        cache_schema[cache_key] = out_schema
         return out_schema
+
+    def process(self, inputs):
+        if self.INPUT_CONFIG in inputs:
+            self.conf.update(inputs[self.INPUT_CONFIG].data)
+        output = {}
+        if self.outport_connected(self.OUTPUT_CONFIG):
+            # here we need to do the hyper parameter search
+            def search_fun(config):
+                task_graph = TaskGraph.load_taskgraph(
+                    get_file_path(self.conf['taskgraph']))
+                task_graph.build()
+
+                outputLists = []
+                replaceObj = {}
+                input_feeders = []
+
+                def inputNode_fun(inputNode, in_ports):
+                    inports = inputNode.ports_setup().inports
+
+                    class InputFeed(Node):
+
+                        def columns_setup(self):
+                            output = {}
+                            for inp in inputNode.inputs:
+                                output[inp['to_port']] = inp[
+                                    'from_node'].columns_setup()[
+                                        inp['from_port']]
+                            # it will be something like { input_port: columns }
+                            return output
+
+                        def ports_setup(self):
+                            # it will be something like { input_port: types }
+                            return NodePorts(inports={}, outports=inports)
+
+                        def conf_schema(self):
+                            return ConfSchema()
+
+                        def process(self, empty):
+                            output = {}
+                            for key in inports.keys():
+                                if inputNode.uid+'@'+key in inputs:
+                                    output[key] = inputs[inputNode.uid+'@'+key]
+                            return output
+
+                    uni_id = str(uuid.uuid1())
+                    obj = {
+                        TaskSpecSchema.task_id: uni_id,
+                        TaskSpecSchema.conf: {},
+                        TaskSpecSchema.node_type: InputFeed,
+                        TaskSpecSchema.inputs: []
+                    }
+                    input_feeders.append(obj)
+                    newInputs = {}
+                    for key in inports.keys():
+                        if inputNode.uid+'@'+key in inputs:
+                            newInputs[key] = uni_id+'.'+key
+                    for inp in inputNode.inputs:
+                        if inp['to_port'] not in in_ports:
+                            # need to keep the old connections
+                            newInputs[inp['to_port']] = (inp['from_node'].uid
+                                                         + '.' + inp['from_port'])
+                    replaceObj.update({inputNode.uid: {
+                        TaskSpecSchema.inputs: newInputs}
+                    })
+
+                def outNode_fun(outNode, out_ports):
+                    pass
+                
+                outputLists = self.conf['metrics']
+
+                self._make_sub_graph_connection(task_graph,
+                                                inputNode_fun, outNode_fun)
+
+                task_graph.extend(input_feeders)
+                self.update_conf_for_search(replaceObj, task_graph, config)
+                result = task_graph.run(outputLists, replace=replaceObj)
+                metric_report = {item: result[item] for item in outputLists}
+                tune.report(**metric_report)
+            
+            config = {}
+            for para in self.conf['parameters']:
+                fun_name = para['search']['function']
+                fun = getattr(tune, fun_name)
+                if fun_name == 'grid_search' or fun_name == 'choice':
+                    config[para['name']] = fun(para['search']['args']) 
+                else:
+                    config[para['name']] = fun(*para['search']['args']) 
+
+            outputLists = self.conf['metrics']
+            analysis = tune.run(search_fun, **self.conf['tune'])
+            best = analysis.get_best_config(metric=outputLists[0])
+            for key in best.keys():
+                self.conf['context'][key]['value'] = best[key]
+            output[self.OUTPUT_CONFIG] = self.conf
+        more_output = super().process(inputs)
+        output.update(more_output)
+        return output
+
+    def update_conf_for_search(self, replaceObj, task_graph, config):
+        # find the other replacment conf
+        if task_graph:
+            for task in task_graph:
+                key = task.get('id')
+                newid = key
+                conf = task.get('conf')
+                if newid in replaceObj:
+                    replaceObj[newid].update({'conf': conf})
+                else:
+                    replaceObj[newid] = {}
+                    replaceObj[newid].update({'conf': conf})
+        # replace the numbers from the context
+        if 'context' in self.conf:
+            for key in self.conf['context'].keys():
+                val = self.conf['context'][key]['value']
+                if key in config:
+                    val = config[key]
+                for map_obj in self.conf['context'][key]['map']:
+                    xpath = map_obj['xpath']
+                    expr = parse(xpath)
+                    expr.update(replaceObj, val)
