@@ -13,10 +13,10 @@ import ray
 from ray.tune import Analysis
 import cudf
 import pandas
-import ray
-
-ray.init(ignore_reinit_error=True,
-         dashboard_host='0.0.0.0')
+# import ray
+# 
+# ray.init(ignore_reinit_error=True,
+#          dashboard_host='0.0.0.0')
 
 #ray.init(redis_max_memory=10**8)
 
