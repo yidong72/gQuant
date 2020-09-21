@@ -8,7 +8,8 @@ from gquant.dataframe_flow.task import load_modules, get_gquant_config_modules
 import gquant.plugin_nodes as plugin_nodes
 import inspect
 import uuid
-from pathlib import Path
+
+dynamic_modules = {}
 # import sys
 # sys.path.append('modules') # noqa E262
 
@@ -237,4 +238,19 @@ def add_nodes():
                     n = node[1](t)
                     nodeObj = get_node_obj(n)
                     all_nodes[modulename].append(nodeObj)
+    for module in dynamic_modules.keys():
+        modulename = module
+        all_nodes[modulename] = []
+        classObj = dynamic_modules[module]
+        if issubclass(classObj, Node):
+            task = {'id': 'node_'+str(uuid.uuid4()),
+                    'type': classObj.__name__,
+                    'conf': {},
+                    'inputs': [],
+                    'module': module
+                    }
+            t = Task(task)
+            n = classObj(t)
+            nodeObj = get_node_obj(n)
+            all_nodes[modulename].append(nodeObj)
     return all_nodes

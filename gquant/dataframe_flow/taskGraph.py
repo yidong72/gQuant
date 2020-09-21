@@ -10,8 +10,24 @@ import warnings
 import copy
 import traceback
 import dask
+import cloudpickle
+import base64
+from types import ModuleType
 
 __all__ = ['TaskGraph', 'OutputCollector']
+
+
+def add_module_from_base64(module_name, class_str):
+    class_obj = cloudpickle.loads(base64.b64decode(class_str))
+    class_name = class_obj.__name__
+    import sys
+    if module_name in sys.modules:
+        mod = sys.modules[module_name]
+    else:
+        mod = ModuleType(module_name)
+        sys.modules[module_name] = mod
+    setattr(mod, class_name, class_obj)
+    return class_obj
 
 
 class OutputCollector(Node):
@@ -395,6 +411,19 @@ class TaskGraph(object):
         self.__node_dict.clear()
         self.__task_list.clear()
         self.__index = None
+
+    def register_node(self, module_name, encoded_class):
+        """
+        register the node to a module with `module_name`
+        """
+        if self.__widget is not None:
+            cacheCopy = copy.deepcopy(self.__widget.cache)
+            cacheCopy['register'] = {
+                "module": module_name,
+                "class": encoded_class
+            }
+            add_module_from_base64(module_name, encoded_class)
+            self.__widget.cache = cacheCopy
 
     def _run(self, outputs=None, replace=None, profile=False, formated=False):
         replace = dict() if replace is None else replace

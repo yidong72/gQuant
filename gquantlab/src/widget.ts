@@ -3,6 +3,7 @@
 import { DOMWidgetModel, DOMWidgetView, ViewList } from '@jupyter-widgets/base';
 import * as widgets from '@jupyter-widgets/base';
 import { MODULE_NAME, MODULE_VERSION } from './version';
+import { requestAPI } from './gquantlab';
 import { ContentHandler, INode } from './document';
 import { MainView } from './mainComponent';
 import { Panel, Widget } from '@lumino/widgets';
@@ -22,7 +23,8 @@ import {
   setupToolBarCommands
 } from './commands';
 import { JupyterFrontEnd } from '@jupyterlab/application';
-import { Cell } from '@jupyterlab/cells';
+import { ContextMenuSvg } from '@jupyterlab/ui-components';
+import { setupContextMenu } from '.';
 
 export class GQuantModel extends DOMWidgetModel {
   static serializers = {
@@ -125,6 +127,7 @@ export class GQuantView extends DOMWidgetView {
       GQuantView.apps
     );
     this.addCommands(commands, toolBar);
+    this.createContexMenu();
   }
 
   run(): void {
@@ -191,6 +194,31 @@ export class GQuantView extends DOMWidgetView {
   }
 
   cache_changed(): void {
-    this._contentHandler.chartStateUpdate.emit(this.model.get('cache'));
+    const cache = this.model.get('cache');
+    if ('register' in cache) {
+      const payload = cache['register'];
+      const result = requestAPI<any>('register_node', {
+        body: JSON.stringify(payload),
+        method: 'POST'
+      });
+      result.then(data => {
+        console.log(data);
+      });
+      delete cache['register'];
+    }
+
+    this._contentHandler.chartStateUpdate.emit(cache);
+  }
+
+  createContexMenu(): void {
+    const commands = GQuantView.apps.commands;
+    const contextMenu = new ContextMenuSvg({ commands });
+    setupContextMenu(contextMenu, commands, null);
+    this.pWidget.node.addEventListener('contextmenu', (event: MouseEvent) => {
+      if (contextMenu.open(event)) {
+        event.preventDefault();
+        event.stopPropagation();
+      }
+    });
   }
 }
