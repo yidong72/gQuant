@@ -131,6 +131,7 @@ class Task(object):
             if path not in sys.path:
                 sys.path.append(path)
 
+        module_dir = None
         if isinstance(node_type, str):
             if modulepath is not None:
                 loaded = load_modules(modulepath)
@@ -157,10 +158,13 @@ class Task(object):
                 except AttributeError:
                     modules = get_gquant_config_modules()
                     if (module_name is not None):
-                        loaded = load_modules(
-                            modules[module_name], name=module_name)
-                        module_dir = loaded.path
-                        mod = loaded.mod
+                        if module_name in sys.modules:
+                            mod = sys.modules[module_name]
+                        else:
+                            loaded = load_modules(
+                                modules[module_name], name=module_name)
+                            module_dir = loaded.path
+                            mod = loaded.mod
                         try:
                             NodeClass = getattr(mod, node_type)
                         except AttributeError:
@@ -179,7 +183,8 @@ class Task(object):
                         raise Exception("Cannot find the Node Class:" +
                                         node_type)
                     else:
-                        append_path(module_dir)
+                        if module_dir is not None:
+                            append_path(module_dir)
                         try:
                             # add python path to all the client workers
                             # assume all the worikers share the same directory

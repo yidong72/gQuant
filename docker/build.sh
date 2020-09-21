@@ -169,13 +169,16 @@ RUN pip install jsonpath-ng ray[tune] Cython
 WORKDIR /home/quant/
 RUN git clone https://github.com/NVIDIA/NeMo.git 
 WORKDIR /home/quant/NeMo
-RUN sed -i 's/numba<=0.48/numba==0.49.1/g' requirements/requirements_asr.txt
+RUN sed -i "s/numba<=0.48/numba==0.49.1/g" requirements/requirements_asr.txt
 RUN bash reinstall.sh
 
 RUN conda install -y ruamel.yaml
 
 RUN mkdir -p /home/quant/gQuant
 WORKDIR /home/quant/gQuant
+
+RUN pip install streamz
+
 $INSTALL_GQUANT
 EOF
 docker build -f $D_FILE -t $D_CONT .
