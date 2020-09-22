@@ -196,6 +196,18 @@ export class GQuantView extends DOMWidgetView {
     const commands = GQuantView.apps.commands;
     const contextMenu = new ContextMenuSvg({ commands });
     setupContextMenu(contextMenu, commands, null);
+    const createOuputView = 'notebook:create-output-view';
+
+    contextMenu.addItem({
+      type: 'separator',
+      selector: '.jp-GQuant'
+    });
+
+    contextMenu.addItem({
+      command: createOuputView,
+      selector: '.jp-GQuant'
+    });
+
     this.pWidget.node.addEventListener('contextmenu', (event: MouseEvent) => {
       if (contextMenu.open(event)) {
         event.preventDefault();
