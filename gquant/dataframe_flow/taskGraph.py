@@ -13,6 +13,7 @@ import dask
 import cloudpickle
 import base64
 from types import ModuleType
+from .util import get_encoded_class
 
 __all__ = ['TaskGraph', 'OutputCollector']
 
@@ -412,11 +413,15 @@ class TaskGraph(object):
         self.__task_list.clear()
         self.__index = None
 
-    def register_node(self, module_name, encoded_class):
+    def register_node(self, module_name, classObj):
         """
-        register the node to a module with `module_name`
+        Register the Node Class to a module with `module_name`.
+        It will register the Node module into the Jupyterlab kernel space, 
+        communicate with the client to populate the add nodes menus,
+        sync up with Jupyterlab Server space to register the Node module. 
         """
         if self.__widget is not None:
+            encoded_class = get_encoded_class(classObj)
             cacheCopy = copy.deepcopy(self.__widget.cache)
             cacheCopy['register'] = {
                 "module": module_name,
