@@ -216,7 +216,7 @@ def add_nodes():
                     t = Task(task)
                     n = node[1](t)
                     if issubclass(node[1], Node):
-                        nodeObj = get_node_obj(n)
+                        nodeObj = get_node_obj(n, False)
                         all_nodes[item[0]].append(nodeObj)
     for module in all_modules:
         module_file_or_path = Path(all_modules[module])
@@ -246,7 +246,7 @@ def add_nodes():
                             }
                     t = Task(task)
                     n = node[1](t)
-                    nodeObj = get_node_obj(n)
+                    nodeObj = get_node_obj(n, False)
                     all_nodes[modulename].append(nodeObj)
     for module in dynamic_modules.keys():
         modulename = module
@@ -263,6 +263,6 @@ def add_nodes():
                         }
                 t = Task(task)
                 n = classObj(t)
-                nodeObj = get_node_obj(n)
+                nodeObj = get_node_obj(n, False)
                 node_lists.append(nodeObj)
     return all_nodes
