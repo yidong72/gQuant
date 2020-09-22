@@ -109,7 +109,7 @@ def get_nodes(task_graph):
     return {'nodes': nodes, 'edges': edges}
 
 
-def get_node_obj(node):
+def get_node_obj(node, count_id=True):
     """
     It is a private function to convert a Node instance into a dictionary for
     client to consume.
@@ -131,7 +131,10 @@ def get_node_obj(node):
         width = 160
         typeName = OUTPUT_TYPE
     else:
-        width = max(max(len(node.uid), len(typeName)) * 10, 100)
+        if count_id:
+            width = max(max(len(node.uid), len(typeName)) * 10, 100)
+        else:
+            width = max(len(typeName) * 10, 100)
     conf = node._task_obj.get('conf')
     out_node = {'width': width,
                 'id': node.uid,
@@ -211,7 +214,7 @@ def add_nodes():
                     t = Task(task)
                     n = node[1](t)
                     if issubclass(node[1], Node):
-                        nodeObj = get_node_obj(n)
+                        nodeObj = get_node_obj(n, False)
                         all_nodes[item[0]].append(nodeObj)
     for module in all_modules:
         loaded = load_modules(all_modules[module], module)
@@ -234,7 +237,7 @@ def add_nodes():
                             }
                     t = Task(task)
                     n = node[1](t)
-                    nodeObj = get_node_obj(n)
+                    nodeObj = get_node_obj(n, False)
                     all_nodes[modulename].append(nodeObj)
     for module in dynamic_modules.keys():
         modulename = module
@@ -251,6 +254,6 @@ def add_nodes():
                         }
                 t = Task(task)
                 n = classObj(t)
-                nodeObj = get_node_obj(n)
+                nodeObj = get_node_obj(n, False)
                 node_lists.append(nodeObj)
     return all_nodes
