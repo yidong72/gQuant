@@ -38,14 +38,14 @@ class RouteHandlerRegister(APIHandler):
 
     @tornado.web.authenticated
     def post(self):
-        from .server_utils import dynamic_modules
+        from .server_utils import register_node
         # input_data is a dictionnary with a key "name"
         input_data = self.get_json_body()
         module_name = input_data['module']
         class_str = input_data['class']
         class_obj = add_module_from_base64(module_name, class_str)
+        register_node(module_name, class_obj)
         self.finish(json.dumps(class_obj.__name__))
-        dynamic_modules[module_name] = class_obj
 
 
 class RouteHandlerLoadAllNodes(APIHandler):
