@@ -1,6 +1,4 @@
 [ModuleFiles]
-
-custom_port_nodes= %(MODULEPATH)s/custom_port_nodes.py
 nemo.asr= %(MODULEPATH)s/asr.py
 nemo.common= %(MODULEPATH)s/common.py
 nemo.cv= %(MODULEPATH)s/cv.py
