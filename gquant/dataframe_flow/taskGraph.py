@@ -217,6 +217,30 @@ class TaskGraph(object):
 
     @staticmethod
     def register_lab_node(module_name, class_obj):
+        """
+        Register the node class for the GQuantlab. It put the class_obj
+        into a sys.modules with `module_name`. It will register the node
+        class into the Jupyterlab kernel space, communicate with the
+         client to populate the add nodes menus, sync up with
+         Jupyterlab Server space to register the node class.
+
+        The latest registered `class_obj` overwrites the old one.
+
+        Arguments
+        -------
+        module_name: str
+            the module name for `class_obj`. It will also be the menu name for
+             the node. Note, if use '.' inside the 'module_name', the client
+              will automatically construct the hierachical menus based on '.'
+
+        class_obj: Node
+            The node class that is the subclass of gQuant 'Node'. It is usually
+            defined dynamically so it can be registered.
+
+        Returns
+        -----
+        None
+        """
         global server_task_graph
         if server_task_graph is None:
             server_task_graph = TaskGraph()
@@ -428,10 +452,7 @@ class TaskGraph(object):
 
     def register_node(self, module_name, classObj):
         """
-        Register the Node Class to a module with `module_name`.
-        It will register the Node module into the Jupyterlab kernel space, 
-        communicate with the client to populate the add nodes menus,
-        sync up with Jupyterlab Server space to register the Node module. 
+        Check `TaskGraph.register_lab_node`
         """
         if self.__widget is not None:
             encoded_class = get_encoded_class(classObj)
