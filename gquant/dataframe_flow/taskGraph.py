@@ -17,6 +17,7 @@ from .util import get_encoded_class
 
 __all__ = ['TaskGraph', 'OutputCollector']
 
+server_task_graph = None
 
 def add_module_from_base64(module_name, class_str):
     class_obj = cloudpickle.loads(base64.b64decode(class_str))
@@ -209,6 +210,18 @@ class TaskGraph(object):
         for node_in in node.inputs:
             inode = node_in['from_node']
             self.__find_roots(inode, inputs, consider_load)
+
+    def start_labwidget(self):
+        from IPython.display import display
+        display(self.draw())
+
+    @staticmethod
+    def register_lab_node(module_name, class_obj):
+        global server_task_graph
+        if server_task_graph is None:
+            server_task_graph = TaskGraph()
+            server_task_graph.start_labwidget()
+        server_task_graph.register_node(module_name, class_obj)
 
     @staticmethod
     def load_taskgraph(filename):
