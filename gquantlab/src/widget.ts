@@ -23,8 +23,7 @@ import {
   setupToolBarCommands
 } from './commands';
 import { JupyterFrontEnd } from '@jupyterlab/application';
-import { ContextMenuSvg } from '@jupyterlab/ui-components';
-import { setupContextMenu } from '.';
+import { Cell } from '@jupyterlab/cells';
 
 export class GQuantModel extends DOMWidgetModel {
   static serializers = {
