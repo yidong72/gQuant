@@ -264,5 +264,21 @@ def add_nodes():
                 all_nodes.setdefault(modulename, []).append(nodeObj)
 
             loaded_node_classes.append(nodecls)
-
+    for module in dynamic_modules.keys():
+        modulename = module
+        node_lists = []
+        all_nodes[modulename] = node_lists
+        for class_name in dynamic_modules[module].keys():
+            classObj = dynamic_modules[module][class_name]
+            if issubclass(classObj, Node):
+                task = {'id': 'node_'+str(uuid.uuid4()),
+                        'type': classObj.__name__,
+                        'conf': {},
+                        'inputs': [],
+                        'module': module
+                        }
+                t = Task(task)
+                n = classObj(t)
+                nodeObj = get_node_obj(n, False)
+                node_lists.append(nodeObj)
     return all_nodes
