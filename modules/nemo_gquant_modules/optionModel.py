@@ -167,8 +167,8 @@ class ParameterIter(object):
         X[:, 1] += self.minT 
         
         X[:, 0] += 10.0
-        X[:, 3] += 10.0        
-        X[:, 4] += 10.0  
+        X[:, 2] += 10.0        
+        X[:, 3] += 10.0  
         
         X[:, 4] += 0.0001
         X[:, 5] += 0.0001
@@ -188,14 +188,16 @@ class SimulationIter(object):
         return self
     
     def __next__(self):
+        # Parameters order (B, T, K, S0, mu, sigma, r)
         para = next(self.para_iter)
         B = cupy.ascontiguousarray(para[:, 0])
-        K = cupy.ascontiguousarray(para[:, 1])
-        S0 = cupy.ascontiguousarray(para[:, 2])
-        sigma = cupy.ascontiguousarray(para[:, 3])
+        T = cupy.ascontiguousarray(para[:, 1])
+        K = cupy.ascontiguousarray(para[:, 2])
+        S0 = cupy.ascontiguousarray(para[:, 3])
         mu = cupy.ascontiguousarray(para[:, 4])
-        r = cupy.ascontiguousarray(para[:, 5])
-        T = cupy.ascontiguousarray(para[:, 6])
+        sigma = cupy.ascontiguousarray(para[:, 5])        
+        r = cupy.ascontiguousarray(para[:, 6])
+
         N_STEPS = cupy.ceil(T * self.Y_STEPS).astype(cupy.int64)
         number_of_threads = self.block_threads
         number_of_blocks = (self.N_PATHS * self.N_BATCH - 1) // number_of_threads + 1
@@ -304,6 +306,7 @@ class MSELoss(nemo.backends.pytorch.nm.LossNM):
         self._criterion = nn.MSELoss()
 
     def _loss_function(self, **kwargs):
+        # print('loss', self._criterion(*(kwargs.values())))
         return self._criterion(*(kwargs.values()))
 
 
@@ -329,12 +332,12 @@ class NetLayer(nemo.backends.pytorch.nm.TrainableNM):
 
     def __init__(self, hidden=512, name=None):
         super().__init__(name=name)
-        self.fc1 = nn.Linear(7, hidden)
-        self.fc2 = nn.Linear(hidden, hidden)
-        self.fc3 = nn.Linear(hidden, hidden)
-        self.fc4 = nn.Linear(hidden, hidden)
-        self.fc5 = nn.Linear(hidden, hidden)
-        self.fc6 = nn.Linear(hidden, 1)
+        self.fc1 = nn.Linear(7, hidden).cuda()
+        self.fc2 = nn.Linear(hidden, hidden).cuda()
+        self.fc3 = nn.Linear(hidden, hidden).cuda()
+        self.fc4 = nn.Linear(hidden, hidden).cuda()
+        self.fc5 = nn.Linear(hidden, hidden).cuda()
+        self.fc6 = nn.Linear(hidden, 1).cuda()
         self.register_buffer('norm',
                              torch.tensor([198.0,
                                            2.0,
@@ -358,15 +361,14 @@ class NetLayer(nemo.backends.pytorch.nm.TrainableNM):
         """
         Parameters order (B, T, K, S0, mu, sigma, r)
         """
-        print(x, x.shape)
         y = self._forward(x)
-        inputs = x.clone().detach()
+        # inputs = x.clone().detach()
         # inputs = x
-        inputs.requires_grad = True
+        x.requires_grad = True
         # instead of using loss.backward(), use torch.autograd.grad() to compute gradients
         # https://pytorch.org/docs/stable/autograd.html#torch.autograd.grad
-        loss_grads = grad(self._forward(inputs), inputs, torch.ones(inputs.shape[0]).cuda(), create_graph=True)
-        return torch.cat((y, loss_grads[0][1:]))
+        loss_grads = grad(self._forward(x).cuda().sum(), x, create_graph=True)
+        return torch.cat((y, loss_grads[0][:, 1:]), axis=1)
 
 class OptionDataLayerNode(NeMoBase, Node):
     def init(self):
