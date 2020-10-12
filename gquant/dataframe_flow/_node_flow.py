@@ -430,16 +430,21 @@ class NodeTaskGraphMixin(object):
             return False
 
         use_delayed = False
-        for _, ival in inputs.items():
+        for ival in ivals:
             if isinstance(ival, DaskDataFrame):
                 use_delayed = True
                 break
+
+        # NOTE: Currently only support delayed processing when one of the
+        #     inputs is a dask_cudf.DataFrame. In the future might generalize
+        #     to support dask processing of other delayed/future type inputs.
         if not use_delayed:
             warn_msg = \
                 'None of the Node "{}" inputs '\
-                'is cudf.DataFrame or dask_cudf.DataFrame. Ignoring '\
+                'is a dask_cudf.DataFrame. Ignoring '\
                 '"delayed_process" setting.'.format(self.uid)
             warnings.warn(warn_msg)
+
         return use_delayed
 
     def __delayed_call(self, inputs):
