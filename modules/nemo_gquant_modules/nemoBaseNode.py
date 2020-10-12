@@ -43,52 +43,31 @@ def serialize_type(neural_type):
     return output
 
 
-def get_parameters(class_obj, conf):
-    init_fun = class_obj.__init__
-    sig = inspect.signature(init_fun)
-    hasEmpty = False
-    init_para = {}
-    for key in sig.parameters.keys():
-        if key == 'self':
-            # ignore the self
-            continue
-        if key in conf:
-            init_para[key] = conf[key]
-        else:
-            hasEmpty = True
-            break
-    if not hasEmpty:
-        return init_para
-    else:
-        return None
+class NeMoBase:
 
-
-def get_conf_parameters(class_obj):
-    init_fun = class_obj.__init__
-    sig = inspect.signature(init_fun)
-    init_para = OrderedDict()
-    for key in sig.parameters.keys():
-        if key == 'self':
-            # ignore the self
-            continue
-        para = sig.parameters[key]
-        default_val = None
-        if para.default == inspect._empty:
-            p_type = defaut_type
-        elif para.default is None:
-            p_type = defaut_type
-        else:
-            if para.default.__class__.__name__ not in type_map:
-                print(para.default, type(para.default))
+    def get_conf_parameters(self, class_obj):
+        init_fun = class_obj.__init__
+        sig = inspect.signature(init_fun)
+        init_para = OrderedDict()
+        for key in sig.parameters.keys():
+            if key == 'self':
+                # ignore the self
+                continue
+            para = sig.parameters[key]
+            default_val = None
+            if para.default == inspect._empty:
+                p_type = defaut_type
+            elif para.default is None:
                 p_type = defaut_type
             else:
-                p_type = type_map[para.default.__class__.__name__]
-            default_val = para.default
-        init_para[para.name] = (p_type, default_val)
-    return init_para
-
-
-class NeMoBase:
+                if para.default.__class__.__name__ not in type_map:
+                    print(para.default, type(para.default))
+                    p_type = defaut_type
+                else:
+                    p_type = type_map[para.default.__class__.__name__]
+                default_val = para.default
+            init_para[para.name] = (p_type, default_val)
+        return init_para
 
     def init(self, class_obj):
         if nemo.core.NeuralModuleFactory.get_default_factory() is None:
@@ -96,7 +75,7 @@ class NeMoBase:
         self.instanceClass = class_obj
         self.instance = None
         self.file_fields = []
-        conf_para = get_conf_parameters(class_obj)
+        conf_para = self.get_conf_parameters(class_obj)
         self.fix_type = {}
         self.INPUT_NM = 'in_nm'
         self.OUTPUT_NM = 'out_nm'
@@ -221,7 +200,7 @@ class NeMoBase:
         return out_cols
 
     def conf_schema(self):
-        conf_para = get_conf_parameters(self.instanceClass)
+        conf_para = self.get_conf_parameters(self.instanceClass)
         class_doc = self.instanceClass.__doc__
         desc = "" if class_doc is None else class_doc
         init_doc = self.instanceClass.__init__.__doc__
@@ -266,8 +245,27 @@ class NeMoBase:
             }
         return ConfSchema(json=json, ui=ui)
 
+    def get_parameters(self, class_obj, conf, inputs):
+        init_fun = class_obj.__init__
+        sig = inspect.signature(init_fun)
+        hasEmpty = False
+        init_para = {}
+        for key in sig.parameters.keys():
+            if key == 'self':
+                # ignore the self
+                continue
+            if key in conf:
+                init_para[key] = conf[key]
+            else:
+                hasEmpty = True
+                break
+        if not hasEmpty:
+            return init_para
+        else:
+            return None
+
     def process(self, inputs):
-        para = get_parameters(self.instanceClass, self.conf)
+        para = self.get_parameters(self.instanceClass, self.conf, inputs)
         app = nemo.utils.app_state.AppState()
         self.instance = None
         if issubclass(self.instanceClass, TrainableNM):
