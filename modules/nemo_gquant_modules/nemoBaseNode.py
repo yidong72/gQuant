@@ -197,6 +197,8 @@ class NeMoBase:
                 out_cols[k] = serialize_type(outports[k])
         if self.instance is not None:
             out_cols[self.OUTPUT_NM] = self.conf
+        else:
+            out_cols[self.OUTPUT_NM] = {}
         return out_cols
 
     def conf_schema(self):
