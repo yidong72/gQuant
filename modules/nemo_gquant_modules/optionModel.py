@@ -104,14 +104,16 @@ class NetLayer(nemo.backends.pytorch.nm.TrainableNM):
         """
         return {"y_pred": NeuralType(('B', 'D'), ChannelType())}
 
-    def __init__(self, hidden=512, name=None):
+    def __init__(self, hidden=512, layers=4, name=None):
         super().__init__(name=name)
-        self.fc1 = nn.Linear(7, hidden).cuda()
-        self.fc2 = nn.Linear(hidden, hidden).cuda()
-        self.fc3 = nn.Linear(hidden, hidden).cuda()
-        self.fc4 = nn.Linear(hidden, hidden).cuda()
-        self.fc5 = nn.Linear(hidden, hidden).cuda()
-        self.fc6 = nn.Linear(hidden, 1).cuda()
+        self.network = nn.ModuleList()
+        for k in range(layers - 1):
+            if k == 0:
+                self.network.append(nn.Linear(7, hidden))
+            else:
+                self.network.append(nn.Linear(hidden, hidden))
+        self.last = nn.Linear(hidden, 1).cuda()
+        self.network = self.network.cuda()
         self.register_buffer('norm',
                              torch.tensor([198.0,
                                            2.0,
@@ -123,14 +125,11 @@ class NetLayer(nemo.backends.pytorch.nm.TrainableNM):
 
     def _forward(self, x):
         x = x / self.norm
-        x = F.elu(self.fc1(x))
-        x = F.elu(self.fc2(x))
-        x = F.elu(self.fc3(x))
-        x = F.elu(self.fc4(x))
-        x = F.elu(self.fc5(x))
-        y = self.fc6(x)
+        for _, l in enumerate(self.network):
+            x = F.elu(l(x))
+        y = self.last(x)
         return y
-        
+
     def forward(self, x):
         """
         Parameters order (B, T, K, S0, mu, sigma, r)

@@ -25,6 +25,7 @@
   type: OptionPriceNode
   conf:
     hidden: 512
+    layers: 6
     name: net
     share_weight: Tying
   inputs:
