@@ -137,12 +137,13 @@ class NetLayer(nemo.backends.pytorch.nm.TrainableNM):
         y = self._forward(x)
         # inputs = x.clone().detach()
         # inputs = x
-        x.requires_grad = True
-        # instead of using loss.backward(), use torch.autograd.grad()
-        # to compute gradients
-        # https://pytorch.org/docs/stable/autograd.html#torch.autograd.grad
-        loss_grads = grad(self._forward(x).cuda().sum(), x,
-                          create_graph=True)
+        with torch.set_grad_enabled(True):
+            x.requires_grad = True
+            # instead of using loss.backward(), use torch.autograd.grad()
+            # to compute gradients
+            # https://pytorch.org/docs/stable/autograd.html#torch.autograd.grad
+            loss_grads = grad(self._forward(x).cuda().sum(), x,
+                              create_graph=True)
         return torch.cat((y, loss_grads[0][:, 1:]), axis=1)
 
 
