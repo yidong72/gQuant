@@ -603,26 +603,6 @@ class TaskGraph(object):
             except Exception:
                 err = traceback.format_exc()
 
-    def run_cleanup(self, clean_module=False):
-        try:
-            import nemo
-            nf = nemo.core.NeuralModuleFactory.get_default_factory()
-        except ModuleNotFoundError:
-            nf = None
-        if nf is not None:
-            nf.reset_trainer()
-            if clean_module:
-                state = nemo.utils.app_state.AppState()
-                state._module_registry.clear()
-                state.active_graph.modules.clear()
-        if clean_module:
-            import dask.distributed
-            try:
-                client = dask.distributed.client.default_client()
-                client.restart()
-            except Exception:
-                err = traceback.format_exc()
-
     def run(self, outputs=None, replace=None, profile=False, formated=False):
         """
         Flow the dataframes in the graph to do the data science computations.

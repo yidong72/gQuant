@@ -8,8 +8,8 @@ import gquant.plugin_nodes as plugin_nodes
 import inspect
 import uuid
 from pathlib import Path
-# import sys
-# sys.path.append('modules') # noqa E262
+
+dynamic_modules = {}
 
 
 def register_node(module, classObj):
