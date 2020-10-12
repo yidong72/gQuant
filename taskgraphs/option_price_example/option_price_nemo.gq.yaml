@@ -1,13 +1,25 @@
-- id: dataset
-  type: OptionDataLayerNode
+- id: parameters
+  type: ParaNode
   conf:
-    seed: 2
+    ? seed
+  inputs: {}
+  module: nemo_modules
+- id: mc_simulation
+  type: SimNode
+  conf:
     N_PATHS: 409600
     Y_STEPS: 252
+  inputs:
+    para_in: parameters.para_out
+  module: nemo_modules
+- id: data
+  type: OptionDataLayerNode
+  conf:
     max_len: 10000
     batch_size: 128
     name: data
-  inputs: {}
+  inputs:
+    sim_iter: mc_simulation.sim_out
   module: nemo_modules
 - id: net
   type: OptionPriceNode
@@ -16,7 +28,7 @@
     name: net
     share_weight: Tying
   inputs:
-    x: dataset.x
+    x: data.x
   module: nemo_modules
 - id: loss
   type: OptionMSELossNode
@@ -24,7 +36,7 @@
     name: loss
   inputs:
     predictions: net.y_pred
-    target: dataset.y
+    target: data.y
   module: nemo_modules
 - id: train
   type: NemoTrainNode
@@ -44,6 +56,7 @@
       checkpoints_to_keep: 4
       force_load: false
       folder: nemo_log
+      epoch_freq: 1
     simple_logger:
       step_freq: 10
       tensors_to_log:
@@ -61,7 +74,6 @@
         eps: 1e-9
         weight_decay: 0
         amsgrad: false
-        momentum: 0.9
       name: adam
   inputs:
     loss@loss: loss.loss
