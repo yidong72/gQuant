@@ -1,0 +1,54 @@
+- id: parameters
+  type: ParaNode
+  conf:
+    ? seed
+  inputs: {}
+  module: nemo_modules
+- id: simulation
+  type: SimNode
+  conf:
+    N_PATHS: 102400
+    Y_STEPS: 252
+  inputs:
+    para_in: parameters.para_out
+  module: nemo_modules
+- id: data
+  type: OptionDataLayerNode
+  conf:
+    max_len: 10
+    batch_size: 1
+    name: data
+  inputs:
+    sim_iter: simulation.sim_out
+  module: nemo_modules
+- id: net
+  type: OptionPriceNode
+  conf:
+    hidden: 512
+    layers: 6
+    name: model
+    share_weight: Tying
+  inputs:
+    x: data.x
+  module: nemo_modules
+- id: infer
+  type: NemoInferNode
+  conf:
+    tensors:
+      - net@y_pred
+      - data@y
+    checkpoint_dir: nemo_log
+    ckpt_pattern: ""
+    verbose: true
+    cache: false
+    use_cache: false
+    offload_to_cpu: true
+  inputs:
+    net@y_pred: net.y_pred
+    data@y: data.y
+  module: nemo_modules
+- id: ""
+  type: Output_Collector
+  conf: {}
+  inputs:
+    in1: infer.torch_tensor
