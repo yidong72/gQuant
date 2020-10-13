@@ -1,0 +1,19 @@
+- id: parameters
+  type: ParaNode
+  conf:
+    ? seed
+  inputs: {}
+  module: nemo_modules
+- id: simulation
+  type: SimNode
+  conf:
+    N_PATHS: 102400
+    Y_STEPS: 252
+  inputs:
+    para_in: parameters.para_out
+  module: nemo_modules
+- id: ""
+  type: Output_Collector
+  conf: {}
+  inputs:
+    in1: simulation.sim_out
