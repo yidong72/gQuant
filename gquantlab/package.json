@@ -1,6 +1,6 @@
 {
   "name": "gquantlab",
-  "version": "0.1.1",
+  "version": "1.0.0",
   "description": "gQuant Jupyterlab extension",
   "keywords": [
     "jupyter",
