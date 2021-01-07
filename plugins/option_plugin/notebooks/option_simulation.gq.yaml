@@ -1,0 +1,19 @@
+- id: parameters
+  type: ParaNode
+  conf:
+    seed: 23
+  inputs: {}
+  module: gquant_option_plugin
+- id: ''
+  type: Output_Collector
+  conf: {}
+  inputs:
+    in1: sim.sim_out
+- id: sim
+  type: SimNode
+  conf:
+    N_PATHS: 102400
+    Y_STEPS: 252
+  inputs:
+    para_in: parameters.para_out
+  module: gquant_option_plugin

@@ -1,0 +1,3 @@
+[gquant.plugin]
+gquant_option_plugin = gquant_option_plugin
+

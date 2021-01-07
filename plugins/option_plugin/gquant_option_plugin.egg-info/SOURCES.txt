@@ -1,0 +1,7 @@
+README.md
+setup.py
+gquant_option_plugin.egg-info/PKG-INFO
+gquant_option_plugin.egg-info/SOURCES.txt
+gquant_option_plugin.egg-info/dependency_links.txt
+gquant_option_plugin.egg-info/entry_points.txt
+gquant_option_plugin.egg-info/top_level.txt

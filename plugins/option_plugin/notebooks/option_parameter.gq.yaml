@@ -1,0 +1,11 @@
+- id: parameters
+  type: ParaNode
+  conf:
+    seed: 23
+  inputs: {}
+  module: gquant_option_plugin
+- id: ''
+  type: Output_Collector
+  conf: {}
+  inputs:
+    in1: parameters.para_out
