@@ -12,7 +12,7 @@
 - id: sim
   type: SimNode
   conf:
-    N_PATHS: 102400
+    N_PATHS: 10240000
     Y_STEPS: 252
   inputs:
     para_in: parameters.para_out
