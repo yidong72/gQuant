@@ -1,0 +1,25 @@
+- id: ''
+  type: Output_Collector
+  conf: {}
+  inputs:
+    in1: sim.sim_out
+- id: sim
+  type: SimNode
+  conf:
+    N_PATHS: 10240000
+    Y_STEPS: 365
+  inputs:
+    para_in: constant_para.para_out
+  module: gquant_option_plugin
+- id: constant_para
+  type: RepeatParaNode
+  conf:
+    repeat: 8
+    B: 100
+    K: 110
+    S0: 120
+    Mu: 0.1
+    Sigma: 0.35
+    R: 0.05
+  inputs: {}
+  module: gquant_option_plugin
