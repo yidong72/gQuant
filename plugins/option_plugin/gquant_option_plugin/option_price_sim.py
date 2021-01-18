@@ -191,6 +191,8 @@ class SimulationIter(object):
                                      self.N_PATHS, self.N_BATCH))
         v = output.reshape(self.N_BATCH,
                            self.N_PATHS).mean(axis=1)[:, None]
-        b = d_output.reshape(6, self.N_BATCH, self.N_PATHS).mean(axis=2).T
+        b = d_output.reshape(6, self.N_BATCH, self.N_PATHS).mean(axis=2).T  
+        # gradient
+        # dt, dK, dS, dmu, dsigma, dr
         y = cupy.concatenate([v, b], axis=1)
         return para, y
