@@ -199,7 +199,7 @@ class ParaNode(Node):
 
     def process(self, inputs):
         output = {}
-        it = ParameterIter(1, seed=self.conf.get('seed', None))
+        it = ParameterIter(seed=self.conf.get('seed', None))
         output.update({'para_out': it})
         return output
 

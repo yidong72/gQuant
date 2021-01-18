@@ -22,10 +22,7 @@ def collector_data(seed):
         for i in range(number):
             if i % (number//100) == 0:
                 print('currently', i/number*100, 'percent')
-            beg = time.time()
             sim_result = next(iterator)
-            end = time.time()
-            print('time', end-beg)
             para = sim_result[0]
             target = sim_result[1]
             paras.append(para)

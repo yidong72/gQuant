@@ -13,7 +13,7 @@
   type: SimNode
   conf:
     N_PATHS: 10240000
-    Y_STEPS: 252
+    Y_STEPS: 365
   inputs:
     para_in: parameters.para_out
   module: gquant_option_plugin
