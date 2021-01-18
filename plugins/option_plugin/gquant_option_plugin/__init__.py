@@ -1,3 +1,3 @@
-from .optionModel import ParaNode, SimNode
+from .optionModel import ParaNode, SimNode, RepeatParaNode
 
-__all__ = ['ParaNode', 'SimNode']
+__all__ = ['ParaNode', 'SimNode', 'RepeatParaNode']

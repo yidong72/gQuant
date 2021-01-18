@@ -1,4 +1,7 @@
 import torch
+import itertools
+import cupy
+from collections.abc import Iterable
 # import torch.nn as nn
 # import torch.utils.data as t_utils
 # import torch.nn.functional as F
@@ -153,7 +156,7 @@ class ParaNode(Node):
         input_ports = {}
         output_ports = {
             'para_out': {
-                PortsSpecSchema.port_type: ParameterIter
+                PortsSpecSchema.port_type: Iterable
             },
         }
         return NodePorts(inports=input_ports, outports=output_ports)
@@ -185,7 +188,6 @@ class ParaNode(Node):
         columns_out = {
             'para_out': {
                 'B': 'float32',
-                "T": 'float32',
                 'K': 'float32',
                 "S0": "float32",
                 "mu": "float32",
@@ -202,16 +204,110 @@ class ParaNode(Node):
         return output
 
 
+class RepeatParaNode(Node):
+
+    def ports_setup(self):
+        input_ports = {}
+        output_ports = {
+            'para_out': {
+                PortsSpecSchema.port_type: Iterable
+            },
+        }
+        return NodePorts(inports=input_ports, outports=output_ports)
+
+    def conf_schema(self):
+        json = {
+            "title": "Constant parameterconfigure",
+            "type": "object",
+            "properties": {
+                "repeat": {
+                    "type": ["number", "null"],
+                    "title": "Repeat",
+                    "description": "Number of times to repeat",
+                    "default": 8
+                },
+                "B": {
+                    "type": ["number", "null"],
+                    "title": "B",
+                    "description": "Barrier price",
+                    "default": 100.0
+                },
+                "K": {
+                    "type": ["number", "null"],
+                    "title": "K",
+                    "description": "Strike price",
+                    "default": 110.0
+                },
+                "S0": {
+                    "type": ["number", "null"],
+                    "title": "S",
+                    "description": "Spot price",
+                    "default": 120.0
+                },
+                "Mu": {
+                    "type": ["number", "null"],
+                    "title": "Mu",
+                    "description": "Constant drift rate",
+                    "default": 0.1
+                },
+                "Sigma": {
+                    "type": ["number", "null"],
+                    "title": "Sigma",
+                    "description": "Implied volatility",
+                    "default": 0.35
+                },
+                "R": {
+                    "type": ["number", "null"],
+                    "title": "R",
+                    "description": "Interest rate",
+                    "default": 0.05
+                },
+            }
+        }
+        ui = {}
+        return ConfSchema(json=json, ui=ui)
+
+    def init(self):
+        pass
+
+    def meta_setup(self):
+        """
+        Parameters order (B, K, S0, mu, sigma, r)
+        """
+        required = {}
+        columns_out = {
+            'para_out': {
+                'B': 'float32',
+                'K': 'float32',
+                "S0": "float32",
+                "mu": "float32",
+                "sigma": "float32",
+                "r": "float32"
+            },
+        }
+        return MetaData(inports=required, outports=columns_out)
+
+    def process(self, inputs):
+        # Parameters order (B, K, S0, mu, sigma, r)
+        output = {}
+        out = cupy.array([self.conf['B'], self.conf['K'], self.conf['S0'],
+                          self.conf['Mu'], self.conf['Sigma'], self.conf['R']],
+                         dtype=cupy.float32)
+        it = itertools.repeat(out, self.conf['repeat']) 
+        output.update({'para_out': it})
+        return output
+
+
 class SimNode(Node):
 
     def ports_setup(self):
         input_ports = {
              'para_in': {
-                PortsSpecSchema.port_type: ParameterIter}
+                PortsSpecSchema.port_type: Iterable}
         }
         output_ports = {
             'sim_out': {
-                PortsSpecSchema.port_type: SimulationIter}
+                PortsSpecSchema.port_type: Iterable}
         }
         return NodePorts(inports=input_ports, outports=output_ports)
 
@@ -230,7 +326,7 @@ class SimNode(Node):
                     "type": "integer",
                     "title": "Steps per year",
                     "description": "Number of steps for one year",
-                    "default": 252
+                    "default": 365
                 },
             }
         }
@@ -244,7 +340,6 @@ class SimNode(Node):
         required = {
             "para_in": {
                 'B': 'float32',
-                "T": 'float32',
                 'K': 'float32',
                 "S0": "float32",
                 "mu": "float32",
@@ -263,7 +358,7 @@ class SimNode(Node):
     def process(self, inputs):
         it = inputs['para_in']
         sit = SimulationIter(it, N_PATHS=self.conf.get('N_PATHS', 102400),
-                             Y_STEPS=self.conf.get('Y_STEPS', 252))
+                             Y_STEPS=self.conf.get('Y_STEPS', 365))
         output = {}
         output.update({'sim_out': sit})
         return output
